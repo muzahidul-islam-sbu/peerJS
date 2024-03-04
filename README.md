@@ -1,20 +1,15 @@
-
 # Orcacoin Peer Node JS
-
 Market protos and methods aren't finalized yet so we are making assumptions and using placeholder protobufs/method parameters for now.
 
-  
-
 ## Consumer Methods
-
->Description:
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Asks the market server to send all the producers currently serving the file.
-Parameters:
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] hash -> the hash of the file you want
-Returns:
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[false] on query error
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[empty List] if no one is serving the file
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[List of producer IPs with their corresponding bid] otherwise
+> Description:
+> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Asks the market server to send all the producers currently serving the file.
+> Parameters:
+> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] hash -> the hash of the file you want
+> Returns:
+> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[false] on query error
+> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[empty List] if no one is serving the file
+> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[List of producer IPs with their corresponding bid] otherwise
 
 **viewProducers(hash)**
 
@@ -43,7 +38,6 @@ Returns:
 **queryProducer(producerIP, hash)**
 
 ## Producer Methods
-
 >Description:
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Tells the market we have this file and are willing to serve it for [bid]
 Parameters:
@@ -55,8 +49,6 @@ Returns:
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[false] otherwise
 
 **registerFile(hash, bid, path)**
-
-  
 
 ## Producer-Server Methods
 We have implementations from both JS teams so we need to choose one or merge them.
