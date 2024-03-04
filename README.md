@@ -1,5 +1,5 @@
 # Orcacoin Peer Node JS
-We are using the protobufs created at <https://github.com/weesstt/starfish-market/blob/main/market/market.proto>
+Market protos and methods aren't finalized yet so we are making assumptions and using placeholder protobufs/method parameters for now.
 
 ## Consumer Methods
 blah
