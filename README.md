@@ -3,7 +3,9 @@ Market protos and methods aren't finalized yet so we are making assumptions and 
 
 ## Consumer Methods
 > Description:
+> 
 > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Asks the market server to send all the producers currently serving the file.
+> 
 > Parameters:
 > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] hash -> the hash of the file you want
 > Returns:
