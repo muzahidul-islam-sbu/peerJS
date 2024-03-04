@@ -11,61 +11,94 @@ var packageDefinition = protoLoader.loadSync(
         oneofs: true
     });
 var marketObject = grpc.loadPackageDefinition(packageDefinition).MARKET;
-// client is a stub -> allows us to call the protobuf service methods specified in the market server
+// market is a stub -> allows us to call the protobuf service methods specified in the market server
 var market = new marketObject.Market('localhost:50051/IP OF MARKET', grpc.credentials.createInsecure());
 
+// Library stuff
 const http = require('http');
 const fs = require('fs');
 
-// UI can just call Consumer.(method they want)
+// Can call Consumer.(method they want)
 // ex: Consumer.viewProducers("lsfli3394ljfdsj")
 export class Consumer {
     /*
         Description:
-            Asks the market server to send all the producers currently
-            serving the file.
+            Asks the market server to send all the producers currently serving the file.
         Parameters: 
             [String] hash -> the hash of the file you want
         Returns:
-            a list of objects in the format MarketAsk
+            [false] on query error
+            [empty List] if no one is serving the file
+            [List of producer IPs with their corresponding bid] otherwise
 
     */
     static viewProducers(hash) {
-        var request = {
-            identifier : hash
+        const args = {
+            protoProperName : hash
         }
-        // Call ConsumerMarketQuery gRPC method
-        // https://github.com/grpc/grpc-node/blob/@grpc/grpc-js@1.9.0/examples/routeguide/dynamic_codegen/route_guide_client.js
-        // https://grpc.io/docs/languages/node/basics/
-        market.ConsumerMarketQuery(request, (error, response) => {
-            console.log('Producers for file hash:', response);
-            // Get all of the producers
-            return response.offers;
+
+        market.insertMarketMethodHere(args, (error, response) => {
+            if (error) {
+                console.error('Error during []:', error);
+                return false;
+            } else {
+                console.log('Producers for file', hash, ": ", response);
+                
+                // format the response into the proper return type
+                // (need market methods to finalize first)
+                ans = response; 
+                return ans;
+            }
         });
     }
 
     /*  
         Description:
-            Consumer selects a producer, downloads file, and finalizes transaction
+            Tell the market that we choose this specific producer
         Parameters: 
-            [Object] marketAsk -> MarketAsk object representing producer that consumer selected
+            [String] producerIP -> Public IP of producer
+            [String] consumerIP -> Public IP of consumer
+            [String] hash ->  Hash of the file
+            [Number] bid -> Bid consumer agrees to pay
         Returns:
-            void
+            [true] If producer is ready for consumer's query
+            [false] otherwise
     */
-    static selectProducer(marketAsk) {
-        //currently skipping ProducerMarketQuery -> ProducerAcceptTransaction
-        //neede more communication with market team
-        market.ProducerAcceptTransaction(marketAsk, (error, response) => {
+    static selectProducer(producerIP, consumerIP, hash, bid) {
+        const args = {
+            protoProperName : producerIP,
+            protoProperName : consumerIP,
+            protoProperName : hash,
+            protoProperName : bid
+        }
+
+        market.insertMarketMethodHere(args, (error, response) => {
             if (error) {
-                console.log("error", error.message);
-                return;
-            }
-            
-            console.log("Transaction ID: ", response.identifier);
-        });
+                console.error('Error during []:', error);
+                return false;
+            } else {
+                console.log("Transaction ID: ", response.identifier);
         
-        // Download file
-        const fileUrl = `http://${marketAsk.producerPubIP}/${marketAsk.identifier}`;
+                // might need to format the response
+                // (need market methods to finalize first)
+                
+                return true;
+            }
+        });
+    }
+
+    /*
+        Description:
+            Consumer downloads file, and finalizes transaction
+        Parameters:
+            [String] producerIP -> Public IP of producer
+            [String] hash ->  Hash of the file
+        Returns:
+            [true] If consumer succesfully downloaded file
+            [false] otherwise
+    */
+    static queryProducer(producerIP, hash) {
+        const fileUrl = `http://${producerIP}/${hash}`;
         const destinationDirectory = './http_server_files';
         const fileName = path.basename(fileUrl);
         const destinationPath = path.join(destinationDirectory, fileName);
@@ -78,8 +111,10 @@ export class Consumer {
                 fileStream.close();
                 console.log(`File downloaded to ${destinationPath}`);
               });
+              return true;
             } else {
               console.error(`Failed to download file. Status code: ${response.statusCode}`);
+              return false;
             }
         });
     }
@@ -92,7 +127,22 @@ export class Consumer {
         Returns:
             abc
     */
-    static template(arg) {
-        return;
+    static template(args) {
+        const args = {
+            abc: abc,
+        };
+        
+        market.insertMarketMethodHere(args, (error, response) => {
+            if (error) {
+                console.error('Error during []:', error);
+                return false;
+            } else {
+                console.log('success message:', response);
+        
+                // might need to format the response
+        
+                return true;
+            }
+        });
     }
 }

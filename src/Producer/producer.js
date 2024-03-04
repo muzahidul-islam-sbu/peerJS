@@ -11,16 +11,18 @@ var packageDefinition = protoLoader.loadSync(
         oneofs: true
     });
 var marketObject = grpc.loadPackageDefinition(packageDefinition).MARKET;
-// client is a stub -> allows us to call the protobuf service methods specified in the market server
+// market is a stub -> allows us to call the protobuf service methods specified in the market server
 var market = new marketObject.Market('localhost:50051/IP OF MARKET', grpc.credentials.createInsecure());
+
+// Library stuff
 const fs = require('fs');
 
-// UI can just call Producer.(method they want)
+// Can just call Producer.(method they want)
 // ex: Producer.registerFile("lsfli3394ljfdsj")
 export class Producer {
     /*
         Description:
-
+            Tells the market we have this file and are willing to serve it for [bid]
         Parameters: 
             [String] hash -> the hash of the file you want to upload
             [Number] bid -> orcacoin producer wants in exchange
@@ -30,20 +32,23 @@ export class Producer {
             [false] otherwise
     */
     static registerFile(hash, bid, path) {
-        const marketAskArgs = {
-            identifier: hash,
-            bid: bid,
+        const args = {
+            protoProperName: hash,
+            protoProperName: bid,
+            protoProperName: path
         };
-      
-        // Call RegisterMarketAsk gRPC method
-        market.RegisterMarketAsk(marketAskArgs, (error, response) => {
+
+        market.insertMarketMethodHere(args, (error, response) => {
             if (error) {
-                console.error('Error during RegisterMarketAsk:', error);
+                console.error('Error during []:', error);
                 return false;
             } else {
                 console.log('File registered successfully:', response);
 
-                // Start serving file at public http server
+                // might need to format the response
+                // (need market methods to finalize first)
+
+                // Add file to directory so that we can serve it on our server
                 const destinationDirectory = './http_server_files';
                 const originalFileName = path.basename(sourcePath);
                 const destinationPath = path.join(destinationDirectory, originalFileName);
@@ -62,7 +67,22 @@ export class Producer {
         Returns:
             abc
     */
-    static template(arg) {
-        return;
+    static template(args) {
+        const args = {
+            abc: abc,
+        };
+
+        market.insertMarketMethodHere(args, (error, response) => {
+            if (error) {
+                console.error('Error during []:', error);
+                return false;
+            } else {
+                console.log('success message:', response);
+
+                // might need to format the response
+
+                return true;
+            }
+        });
     }
 }
