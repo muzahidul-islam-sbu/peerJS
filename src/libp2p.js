@@ -17,10 +17,183 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+import { generateKeyPair, marshalPrivateKey, unmarshalPrivateKey, marshalPublicKey, unmarshalPublicKey } from '@libp2p/crypto/keys'
+import { peerIdFromKeys } from '@libp2p/peer-id'
 
-// import { generateKeyPair, marshalPrivateKey, unmarshalPrivateKey, marshalPublicKey, unmarshalPublicKey } from '@libp2p/crypto/keys'
 // import { RSAPeerId, Ed25519PeerId, Secp256k1PeerId, PeerId } from '@libp2p/interface-peer-id'
+const test_node = await createLibp2p({
+    // peerId: customPeerId,
+    addresses: {
+        // add a listen address (localhost) to accept TCP connections on a random port
+        listen: ['/ip4/0.0.0.0/tcp/0']
+    },
+    transports: [
+        tcp()
+    ],
+    streamMuxers: [
+        yamux()
+    ],
+    connectionEncryption: [
+        noise()
+    ],
+    peerDiscovery: [
+        bootstrap({
+            list: [
+                // bootstrap node here is generated from dig command
+                '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt'
+            ]
+        })
+    ],
+    services: {
+        dht: kadDHT({
+            kBucketSize: 20,
+        }),
+        ping: ping({
+            protocolPrefix: 'ipfs',
+        }),
+    }
+})
 
+async function printKeyPair() {
+    try {
+        const keyPair = await generateKeyPair('ed25519');
+        const {_key: privateKey, _publicKey: publicKey} = keyPair
+        const privateKeyString = privateKey.toString('base64'); 
+        const publicKeyString = publicKey.toString('base64');   
+        const publicKeyHex = publicKey.toString('hex');
+        const privateKeyHex = privateKey.toString('hex');
+
+
+        console.log('Public Key:', publicKey);
+        console.log('Private Key:', privateKey);
+        console.log("Public Key String Format:", publicKeyString);
+        console.log("Private Key String Format:", privateKeyString);
+        console.log("Public Key Hex Format:", privateKeyHex);
+        console.log("Private Key Hex Format:", privateKeyHex);
+
+    } catch (error) {
+        console.error('Error generating key pair:', error);
+    }
+}
+  
+// printKeyPair();
+async function generatePeerId() {
+    try {
+      // Assuming publicKey and privateKey are available from previous operations
+      const {_key: privateKey, _publicKey: publicKey} = await generateKeyPair('ed25519');
+  
+      const peerId = await peerIdFromKeys(publicKey, privateKey);
+      console.log('Generated PeerId:', peerId);
+    } catch (error) {
+      console.error('Error generating PeerId:', error);
+    }
+  }
+  
+// generatePeerId();
+  
+function getPeerID(node) {
+    // console.log(node.peerId);
+    return node.peerId;
+}
+
+function getPublicKeyFromNode(node) {
+    const peerId = getPeerID(node);
+    try {
+      if(peerId.publicKey) {
+        const publicKey = peerId.publicKey;
+        // console.log("Public Key:", publicKey.toString('base64'));
+        return publicKey;
+      } else {
+        console.log("Public key is not embedded in this Peer ID.");
+      }
+
+    } catch(error) {
+      console.error("Error retrieving public key:", error);
+    }
+}
+
+function getPrivateKeyFromNode(node) {
+    const peerId = getPeerID(node);
+    try {
+        if(peerId.privateKey) {
+            const privateKey = peerId.privateKey;
+            // console.log("Private Key:", privateKey.toString('base64'));
+            return privateKey;
+        } else {
+            console.log("Private key is not embedded in this Peer ID.");
+        }
+    } catch(error) {
+        console.error("Error retrieving private key:", error);
+    }
+}
+
+// getPeerID(test_node);
+// getPublicKeyFromNode(test_node);
+
+async function veryifyNode(node, publicKey) {
+
+    const peerId = getPeerID(node);
+    const peerIdKey = await peerIdFromKeys(publicKey)
+
+    console.log("Peer ID from node:", peerId);
+    console.log("Peer ID from Key:", peerIdKey);
+    
+    const peerIdString = peerId.toString();
+    const peerIdKeyString = peerIdKey.toString();
+
+    console.log("Peer ID String from node:", peerIdString);
+    console.log("Peer ID String from Key:", peerIdKeyString);
+    // Compare the string representations
+    if (peerIdString === peerIdKeyString) {
+        return true
+    } else {
+        return false
+    }
+}
+
+const publicKey = getPublicKeyFromNode(test_node)
+
+console.log("public key belongs to this node: ", await veryifyNode(test_node, publicKey));
+
+function parseMultiaddr(multiaddr) {
+    const components = multiaddr.split('/');
+    const result = {
+        networkProtocol: '',
+        transportLayerProtocol: '',
+        portNumber: '',
+        p2pPeerID: ''
+    };
+  
+    // Iterate through the components to fill in the result object
+    components.forEach((component, index) => {
+        switch (component) {
+        case 'ip4':
+        case 'ip6':
+            result.networkProtocol = component;
+            break;
+        case 'tcp':
+        case 'udp':
+            result.transportLayerProtocol = component;
+            if (components[index + 1]) {
+            result.portNumber = components[index + 1];
+            }
+            break;
+        case 'p2p':
+            if (components[index + 1]) {
+            result.p2pPeerID = components[index + 1];
+            }
+            break;
+        }
+    });
+  
+    return result;
+}
+  
+// Example usage
+const multiaddrString = '/ip4/127.0.0.1/tcp/53959/p2p/12D3KooWStnQUitCcYegaMNTNyrmPaHzLfxRE79khfPsFmUYuRmC';
+const parsed = parseMultiaddr(multiaddrString);
+console.log(parsed);
+  
 
 // TODO: Add Encryption
 // const createEd25519PeerId = async () => {
@@ -43,12 +216,14 @@ async function main() {
     // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
 
     // For now we'll just create one node
-    createNode()
+    // createNode()
 
     // Forcefully quit main
     // process.on('SIGTERM', stop);
     // process.on('SIGINT', stop);
 }
+
+
 
 
 // Abstract function for creating new nodes
