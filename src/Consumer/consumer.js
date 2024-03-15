@@ -2,6 +2,7 @@
 var PROTO_PATH = __dirname + '/../../market.proto';
 var grpc = require('@grpc/grpc-js');
 var protoLoader = require('@grpc/proto-loader');
+const Schema = require("../Market/market_pb.js");
 var packageDefinition = protoLoader.loadSync(
     PROTO_PATH, {
         keepCase: true,
