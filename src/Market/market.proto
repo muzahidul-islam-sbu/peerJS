@@ -1,1 +1,40 @@
 // copy the protobuf code at https://github.com/weesstt/starfish-market/blob/main/market/market.proto
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+option go_package = "orcanet-market-js/market/market";
+
+package market;
+
+service Market {
+  // register a file on the market
+  rpc RegisterFile (RegisterFileRequest) returns (google.protobuf.Empty) {}
+
+  // check for holders of a file. returns a list of users
+  rpc CheckHolders (CheckHoldersRequest) returns (HoldersResponse) {}
+}
+
+message User {
+  string id = 1;
+  string name = 2;
+
+  string ip = 3;
+  int32 port = 4;
+
+  // price per mb for a file
+  int64 price = 5;
+}
+
+message CheckHoldersRequest {
+  string fileHash = 1;
+}
+
+message RegisterFileRequest {
+  User user = 1;
+  string fileHash = 2;
+}
+
+message HoldersResponse {
+  repeated User holders = 1;
+}
