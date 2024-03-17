@@ -1,6 +1,16 @@
 # Orcacoin Peer Node JS
 Market protos and methods aren't finalized yet so we are making assumptions and using placeholder protobufs/method parameters for now.
 
+## How to call/run
+```npm install```  
+In your script file, add these lines and then you can call our methods with producer.METHOD or consumer.METHOD.
+```
+const producer = require('../Producer/producer.js').Producer;
+const consumer = require('../Consumer/consumer.js').Consumer;
+producer.registerFile("abc", 2, 3, 4, 5, 6);
+consumer.viewProducers("abc");
+```
+
 ## Consumer Methods
 > Description:  
 > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Asks the market server to send all the producers currently serving the file.  
