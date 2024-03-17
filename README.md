@@ -1,5 +1,5 @@
 # Orcacoin Peer Node JS
-Market protos and methods aren't finalized yet so we are making assumptions and using placeholder protobufs/method parameters for now.
+Currently, only registerFile() and viewProducers() work.
 
 ## How to call/run
 ```npm install```  
@@ -19,7 +19,7 @@ consumer.viewProducers("abc");
 > Returns:  
 > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[false] on query error  
 > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[empty List] if no one is serving the file  
-> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[List of producer IPs with their corresponding bid] otherwise  
+> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[List of Users in the format ]described in the protofi otherwise  
 
 **viewProducers(hash)**
 
@@ -52,13 +52,15 @@ Returns:
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Tells the market we have this file and are willing to serve it for [bid]  
 Parameters:  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] hash -> the hash of the file you want to upload  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Number] bid -> orcacoin producer wants in exchange  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] path -> absolute path of file producer wants to upload  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Number] uid -> peer id  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] uname -> name of file  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Number] uip -> public IP to access producer HTTP server  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Number] uport -> port HTTP server is open on  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Number] uprice -> orcacoin producer wants in exchange  
 Returns:  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[true] on successful registration  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[false] otherwise  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Nothing
 
-**registerFile(hash, bid, path)**
+**registerFile(hash, uid, uname, uip, uport, uprice)**
 
-## Producer-Server Methods
-We have implementations from both JS teams so we need to choose one or merge them.  
+## Peer-Server Methods
+Add here.
