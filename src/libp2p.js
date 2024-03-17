@@ -1,3 +1,4 @@
+// Need to decide on ES6 syntax or other
 import process from 'node:process'
 import { createLibp2p } from 'libp2p'
 import { tcp } from '@libp2p/tcp'
@@ -21,6 +22,22 @@ import { generateKeyPair, marshalPrivateKey, unmarshalPrivateKey, marshalPublicK
 import { peerIdFromKeys } from '@libp2p/peer-id'
 
 // import { RSAPeerId, Ed25519PeerId, Secp256k1PeerId, PeerId } from '@libp2p/interface-peer-id'
+
+
+// Setting up a websocket to exchange with the gui
+import WebSocket from 'ws';
+const ws = new WebSocket('ws://localhost:9090');
+
+// Function to send node information to GUI
+function sendNodeInfoToGUI(nodeInfo) {
+    console.log("Sending node information of type 'NODE_INFO with data: ")
+    console.log(nodeInfo)
+    ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
+}
+
+// libp2p node logic
+
+
 const test_node = await createLibp2p({
     // peerId: customPeerId,
     addresses: {
@@ -76,7 +93,7 @@ async function printKeyPair() {
     }
 }
   
-// printKeyPair();
+printKeyPair();
 async function generatePeerId() {
     try {
       // Assuming publicKey and privateKey are available from previous operations
@@ -127,8 +144,8 @@ function getPrivateKeyFromNode(node) {
     }
 }
 
-// getPeerID(test_node);
-// getPublicKeyFromNode(test_node);
+getPeerID(test_node);
+getPublicKeyFromNode(test_node);
 
 async function veryifyNode(node, publicKey) {
 
@@ -388,5 +405,24 @@ async function exchangeData(node, peerId, data) {
         console.error('Data exchange failed:', error);
     }
 }
+
+// When node information is requested, send it to the GUI
+const nodeInfo = getPeerID(test_node);
+// const nodePublicKey = getPublicKeyFromNode(test_node);
+
+console.log("Now opening up websocket connection...")
+ws.on('open', () => {
+    console.log('WebSocket connection established');
+    // Now the WebSocket connection is open, call sendNodeInfoToGUI
+    sendNodeInfoToGUI(nodeInfo);
+});
+
+ws.on('message', (data) => {
+    console.log('Received message from server:', data.toString());
+});
+
+ws.on('error', (error) => {
+    console.error('WebSocket error:', error);
+});
 
 main()
