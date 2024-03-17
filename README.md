@@ -2,8 +2,9 @@
 Currently, only registerFile() and viewProducers() work.
 
 ## How to call/run
-```npm install```  
-In your script file, add these lines and then you can call our methods with producer.METHOD or consumer.METHOD.
+1. Setup the market server at: https://github.com/YONGCHO1/orcanet-market-js  
+2. ```npm install```  
+3. In your script file, add these lines and then you can call our methods with producer.METHOD or consumer.METHOD.
 ```
 const producer = require('../Producer/producer.js').Producer;
 const consumer = require('../Consumer/consumer.js').Consumer;
