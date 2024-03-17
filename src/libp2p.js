@@ -24,20 +24,7 @@ import { peerIdFromKeys } from '@libp2p/peer-id'
 // import { RSAPeerId, Ed25519PeerId, Secp256k1PeerId, PeerId } from '@libp2p/interface-peer-id'
 
 
-// Setting up a websocket to exchange with the gui
-import WebSocket from 'ws';
-const ws = new WebSocket('ws://localhost:9090');
-
-// Function to send node information to GUI
-function sendNodeInfoToGUI(nodeInfo) {
-    console.log("Sending node information of type 'NODE_INFO with data: ")
-    console.log(nodeInfo)
-    ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
-}
-
 // libp2p node logic
-
-
 const test_node = await createLibp2p({
     // peerId: customPeerId,
     addresses: {
@@ -71,6 +58,79 @@ const test_node = await createLibp2p({
     }
 })
 
+// Setting up a websocket to exchange with the gui
+import { WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+
+async function main() {
+    // For now we'll just create one node
+    // test_node = createNode()
+    const ws = new WebSocketServer({ port: 5174 }) // Server
+    // const ws = new WebSocket('ws://localhost:5174'); // Client
+
+    // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
+    const NodeMap = new Map();
+
+    getPeerID(test_node);
+    getPublicKeyFromNode(test_node);
+
+    const publicKey = getPublicKeyFromNode(test_node)
+
+    console.log("public key belongs to this node: ", await verifyNode(test_node, publicKey));
+
+    // When node information is requested, send it to the GUI
+    const nodeInfo = getPeerID(test_node);
+    // const nodePublicKey = getPublicKeyFromNode(test_node);
+
+    console.log("Now opening up websocket connection...")
+
+    // When a client connects to the WebSocket server
+    ws.on('connection', (ws) => {
+        console.log('Client connected');
+
+        // Handle requests from the GUI 
+        ws.on('message', (message) => {
+            console.log('Request: ', message.toString());
+            if (message.toString() === 'GET_DATA') {
+                console.log("received GET request")
+
+                // // If the message is 'GET_DATA', send the peer node information to the client
+                // const peerNodeInfo = {
+                //   // Example peer node information
+                //   id: 'peerNode123',
+                //   address: '127.0.0.1',
+                //   port: 8080,
+                //   // Add other relevant information as needed
+                // };
+          
+                // // Convert the peer node information to JSON and send it back to the client
+                // ws.send(JSON.stringify(peerNodeInfo));
+                // Send response with header type NODE_INFO
+                ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
+              }
+    
+            // if (parsedData.type === 'NODE_INFO') {
+        });
+
+        // Send a welcome message to the client
+        ws.send('Welcome to the WebSocket server!');
+    });
+
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+    });
+
+    // printKeyPair();
+
+    // Can manage creation of nodes here
+    // For example, subscribe to events, handle incoming messages, etc.
+    // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
+
+    // Forcefully quit main
+    // process.on('SIGTERM', stop);
+    // process.on('SIGINT', stop);
+}
+
 async function printKeyPair() {
     try {
         const keyPair = await generateKeyPair('ed25519');
@@ -92,8 +152,7 @@ async function printKeyPair() {
         console.error('Error generating key pair:', error);
     }
 }
-  
-printKeyPair();
+
 async function generatePeerId() {
     try {
       // Assuming publicKey and privateKey are available from previous operations
@@ -144,10 +203,7 @@ function getPrivateKeyFromNode(node) {
     }
 }
 
-getPeerID(test_node);
-getPublicKeyFromNode(test_node);
-
-async function veryifyNode(node, publicKey) {
+async function verifyNode(node, publicKey) {
 
     const peerId = getPeerID(node);
     const peerIdKey = await peerIdFromKeys(publicKey)
@@ -167,10 +223,6 @@ async function veryifyNode(node, publicKey) {
         return false
     }
 }
-
-const publicKey = getPublicKeyFromNode(test_node)
-
-console.log("public key belongs to this node: ", await veryifyNode(test_node, publicKey));
 
 function parseMultiaddr(multiaddr) {
     const components = multiaddr.split('/');
@@ -224,42 +276,10 @@ console.log(parsed);
 //     throw new Error(`Generated unexpected PeerId type "${id.type}"`)
 //   }
 
-async function main() {
-    // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
-    const NodeMap = new Map();
-
-    // Can manage creation of nodes here
-    // For example, subscribe to events, handle incoming messages, etc.
-    // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
-
-    // For now we'll just create one node
-    // createNode()
-
-    // Forcefully quit main
-    // process.on('SIGTERM', stop);
-    // process.on('SIGINT', stop);
-}
-
-
-
-
 // Abstract function for creating new nodes
 // should be able to take in and register the multiaddr
-async function createNode(multiaddr, NodeMap) {
-    // Generate a private and public key
-    // Each libp2p peer controls a private key, which it keeps secret from all other peers. Every private key has a corresponding public key, which is shared with other peers.
-    let customPeerId;
-    // try {
-    //     customPeerId = await PeerId.create({ 
-    //         bits: 2048,
-    //         keytype: 'RSA', // or 'RSA' or 'secp256k1', depending on the type of keys
-    //         generate: true
-    //     // multihash: publicKey,
-    //     // privateKey: privateKey
-    //     });
-    // } catch (error) {
-    //     console.log("Error generating PeerId: ", error)
-    // }
+async function createNode() {
+    const ws = new WebSocket('ws://localhost:5173')
     const node = await createLibp2p({
         // peerId: customPeerId,
         addresses: {
@@ -405,24 +425,5 @@ async function exchangeData(node, peerId, data) {
         console.error('Data exchange failed:', error);
     }
 }
-
-// When node information is requested, send it to the GUI
-const nodeInfo = getPeerID(test_node);
-// const nodePublicKey = getPublicKeyFromNode(test_node);
-
-console.log("Now opening up websocket connection...")
-ws.on('open', () => {
-    console.log('WebSocket connection established');
-    // Now the WebSocket connection is open, call sendNodeInfoToGUI
-    sendNodeInfoToGUI(nodeInfo);
-});
-
-ws.on('message', (data) => {
-    console.log('Received message from server:', data.toString());
-});
-
-ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-});
 
 main()
