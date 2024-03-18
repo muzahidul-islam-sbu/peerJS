@@ -4,7 +4,7 @@ import { createLibp2p } from 'libp2p'
 import { tcp } from '@libp2p/tcp'
 // import { websockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
-import { multiaddr } from 'multiaddr'
+import { multiaddr } from '@multiformats/multiaddr'
 import { kadDHT } from '@libp2p/kad-dht'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { ping } from '@libp2p/ping' // remove this after done testing
@@ -127,6 +127,7 @@ async function main() {
     // process.on('SIGTERM', stop);
     // process.on('SIGINT', stop);
 }
+
 /**
  * This function creates a public/private key pair and prints the keys as well as their representation in string and hex format
  * @returns {void}
@@ -182,6 +183,12 @@ function getPeerID(node) {
     return node.peerId;
 }
 
+console.log("PeerID of test node:", getPeerID(test_node));
+console.log("Information of known peers on the network:", await test_node.peerStore.get(getPeerID(test_node)));
+
+// console.log("Peer Routing Information:", await test_node.peerRouting.findPeer(getPeerID(test_node)));
+// should pass in peerId of another node
+
 /**
  * This function returns the public key of a node
  * @param {Libp2p} node 
@@ -204,10 +211,12 @@ function getPublicKeyFromNode(node) {
     }
 }
 
+console.log("Public Key from test node:", getPublicKeyFromNode(test_node));
+
 /**
  * This function returns the public key of a node
  * @param {Libp2p} node 
- * @returns {Uint8Array} - the private key represented as an array of 8-bit unsigned integers
+ * @returns {Uint8Array} the private key represented as an array of 8-bit unsigned integers
  */
 
 function getPrivateKeyFromNode(node) {
@@ -254,7 +263,22 @@ async function verifyNode(node, publicKey) {
 }
 
 /**
+ * This function returns the multiaddress of a given node
+ * @param {Libp2p} node 
+ * @returns {Multiaddr} the multiaddress associated with a node
+ */
+function getMultiaddrs(node) {
+    const multiaddrs = node.getMultiaddrs();
+    const multiaddrStrings = multiaddrs.map(multiaddr => multiaddr.toString());
+    return multiaddrStrings;
+}
+
+console.log("Multiaddr of test node:", getMultiaddrs(test_node));
+console.log("Peers that are connected:", test_node.getPeers());
+
+/**
  * This function generates a result object with specific values.
+ * @param {Multiaddr} multiaddr - the multiaddr of a node
  * @returns {Object} An object with the following properties:
  * - networkProtocol: The network protocol (string).
  * - transportLayerProtocol: The transport layer protocol (string).
@@ -297,9 +321,9 @@ function parseMultiaddr(multiaddr) {
 }
   
 // Example usage
-// const multiaddrString = '/ip4/127.0.0.1/tcp/53959/p2p/12D3KooWStnQUitCcYegaMNTNyrmPaHzLfxRE79khfPsFmUYuRmC';
-// const parsed = parseMultiaddr(multiaddrString);
-// console.log(parsed);
+const multiaddrString = '/ip4/127.0.0.1/tcp/53959/p2p/12D3KooWStnQUitCcYegaMNTNyrmPaHzLfxRE79khfPsFmUYuRmC';
+const parsed = parseMultiaddr(multiaddrString);
+console.log("Example of parsing a multiaddr:", parsed);
   
 
 // TODO: Add Encryption
@@ -464,4 +488,4 @@ async function exchangeData(node, peerId, data) {
     }
 }
 
-main()
+// main()
