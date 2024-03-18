@@ -62,7 +62,7 @@ Returns:
 
 **registerFile(hash, uid, uname, uip, uport, uprice)**
 
-## Connection to Peer Node JS
+## Peer Node Connection to GUI
 >Description:
 JS websockets were used to create a server for every newly created node. This websocket server listens for requests from the GUI and responds to its requests with the appropriate peer ID, public key, private key, or other information about the peer node. 
 
