@@ -67,7 +67,7 @@ Returns:
 JS websockets were used to create a server for every newly created node. This websocket server listens for requests from the GUI and responds to its requests with the appropriate peer ID, public key, private key, or other information about the peer node. 
 
 Implementation for the websocket in the GUI project is currently stored in the DataTable.tsx
-Clone and replace the DataTable.tsx file in https://github.com/GreenMarioX/CSE416-OrcaNet with the DataTable.tsx in this project
+Clone and replace the DataTable.tsx file in https://github.com/GreenMarioX/CSE416-OrcaNet with the DataTable.tsx in this project.
 webSocketService.js is an example of how to setup a server using JS websockets
 ## Peer-Server Methods
 Add here.
