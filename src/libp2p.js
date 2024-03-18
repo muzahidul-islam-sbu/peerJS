@@ -18,11 +18,8 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-import { generateKeyPair, marshalPrivateKey, unmarshalPrivateKey, marshalPublicKey, unmarshalPublicKey } from '@libp2p/crypto/keys'
+import { generateKeyPair} from '@libp2p/crypto/keys'
 import { peerIdFromKeys } from '@libp2p/peer-id'
-
-// import { RSAPeerId, Ed25519PeerId, Secp256k1PeerId, PeerId } from '@libp2p/interface-peer-id'
-
 
 // libp2p node logic
 const test_node = await createLibp2p({
@@ -130,7 +127,10 @@ async function main() {
     // process.on('SIGTERM', stop);
     // process.on('SIGINT', stop);
 }
-
+/**
+ * This function creates a public/private key pair and prints the keys as well as their representation in string and hex format
+ * @returns {void}
+ */
 async function printKeyPair() {
     try {
         const keyPair = await generateKeyPair('ed25519');
@@ -153,6 +153,11 @@ async function printKeyPair() {
     }
 }
 
+/**
+ * This function generates a peerId using a generate public/private key pair
+ * @returns {void}
+ */
+
 async function generatePeerId() {
     try {
       // Assuming publicKey and privateKey are available from previous operations
@@ -166,11 +171,22 @@ async function generatePeerId() {
   }
   
 // generatePeerId();
-  
+
+/**
+ * This function returns the peerId of a node
+ * @param {Libp2p} node - the libp2p node
+ * @returns {Ed25519PeerId} the peerId associated with the libp2p node
+ */
 function getPeerID(node) {
     // console.log(node.peerId);
     return node.peerId;
 }
+
+/**
+ * This function returns the public key of a node
+ * @param {Libp2p} node 
+ * @returns {Uint8Array} - the public key represented as an array of 8-bit unsigned integers
+ */
 
 function getPublicKeyFromNode(node) {
     const peerId = getPeerID(node);
@@ -188,6 +204,12 @@ function getPublicKeyFromNode(node) {
     }
 }
 
+/**
+ * This function returns the public key of a node
+ * @param {Libp2p} node 
+ * @returns {Uint8Array} - the private key represented as an array of 8-bit unsigned integers
+ */
+
 function getPrivateKeyFromNode(node) {
     const peerId = getPeerID(node);
     try {
@@ -202,6 +224,13 @@ function getPrivateKeyFromNode(node) {
         console.error("Error retrieving private key:", error);
     }
 }
+
+/**
+ * This function verifies whether the public key belongs to a node
+ * @param {Libp2p} node 
+ * @param {Uint8Array} publicKey - the public key associated with the libp2p node
+ * @returns {boolean} True if the key belongs to the node, otherwise false
+ */
 
 async function verifyNode(node, publicKey) {
 
@@ -223,6 +252,15 @@ async function verifyNode(node, publicKey) {
         return false
     }
 }
+
+/**
+ * This function generates a result object with specific values.
+ * @returns {Object} An object with the following properties:
+ * - networkProtocol: The network protocol (string).
+ * - transportLayerProtocol: The transport layer protocol (string).
+ * - portNumber: The port number (string).
+ * - p2pPeerID: The P2P peer ID (string).
+ */
 
 function parseMultiaddr(multiaddr) {
     const components = multiaddr.split('/');
@@ -259,9 +297,9 @@ function parseMultiaddr(multiaddr) {
 }
   
 // Example usage
-const multiaddrString = '/ip4/127.0.0.1/tcp/53959/p2p/12D3KooWStnQUitCcYegaMNTNyrmPaHzLfxRE79khfPsFmUYuRmC';
-const parsed = parseMultiaddr(multiaddrString);
-console.log(parsed);
+// const multiaddrString = '/ip4/127.0.0.1/tcp/53959/p2p/12D3KooWStnQUitCcYegaMNTNyrmPaHzLfxRE79khfPsFmUYuRmC';
+// const parsed = parseMultiaddr(multiaddrString);
+// console.log(parsed);
   
 
 // TODO: Add Encryption
