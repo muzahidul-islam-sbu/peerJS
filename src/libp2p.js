@@ -9,7 +9,7 @@ import { kadDHT } from '@libp2p/kad-dht'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { ping } from '@libp2p/ping' // remove this after done testing
 import { bootstrap } from '@libp2p/bootstrap'
-
+import {mdns} from '@libp2p/mdns';
 
 import grpc from '@grpc/grpc-js';
 import protoLoader from '@grpc/proto-loader';
@@ -23,13 +23,45 @@ import { peerIdFromKeys } from '@libp2p/peer-id'
 
 // import { RSAPeerId, Ed25519PeerId, Secp256k1PeerId, PeerId } from '@libp2p/interface-peer-id'
 
+(async () => {
+    const test_node2 = await createLibp2p({
+        addresses: {
+        // add a listen address (localhost) to accept TCP connections on a random port
+            listen: ['/ip4/0.0.0.0/tcp/0']
+        },
+        transports: [
+            tcp()
+        ],
+        streamMuxers: [
+            yamux()
+        ],
+        connectionEncryption: [
+            noise()
+        ],
+        peerDiscovery: [
+            mdns()
+        ]
+    });
+
+
+    console.log("test_node2 peerId: ", test_node2.peerId);
+
+    // Listen for peer discovery events
+    test_node2.addEventListener('peer:discovery', (evt) => {
+        console.log('found peer: ', evt.detail.toString())
+        console.log('event', evt.detail);
+    })
+
+    await test_node2.start();
+    console.log('libp2p node started:', test_node2.peerId.toString());
+})();
 
 // libp2p node logic
 const test_node = await createLibp2p({
-    // peerId: customPeerId,
+    peerId: generatePeerId(),
     addresses: {
         // add a listen address (localhost) to accept TCP connections on a random port
-        listen: ['/ip4/0.0.0.0/tcp/0']
+        listen: ['/ip4/0.0.0.0/tcp/0', '/ip4/143.198.182.208/tcp/0']
     },
     transports: [
         tcp()
@@ -46,7 +78,7 @@ const test_node = await createLibp2p({
                 // bootstrap node here is generated from dig command
                 '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt'
             ]
-        })
+        }),
     ],
     services: {
         dht: kadDHT({
@@ -56,11 +88,23 @@ const test_node = await createLibp2p({
             protocolPrefix: 'ipfs',
         }),
     }
+    
+    // Listen for peers discovered via mDNS
 })
+
+// Listen for peers discovered via mDNS
+// node.on('peer:discovery', peerInfo => {
+//     console.log(`Discovered peer: ${peerInfo.id.toB58String()} at ${peerInfo.multiaddrs.map(ma => ma.toString())}`);
+// });
+
+// node.on('peer:discovery', test_node => {
+//     console.log(`Discovered peer: ${test_node.id.toB58String()} at ${test_node.peerAddresses}`);
+// });
 
 // Setting up a websocket to exchange with the gui
 import { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
+
 
 async function main() {
     // For now we'll just create one node
@@ -119,6 +163,8 @@ async function main() {
     ws.on('error', (error) => {
         console.error('WebSocket error:', error);
     });
+
+    createNode()
 
     // printKeyPair();
 
@@ -224,7 +270,16 @@ async function verifyNode(node, publicKey) {
     }
 }
 
+function getMultiaddrs(node) {
+    const multiaddrs = node.getMultiaddrs();
+    const multiaddrStrings = multiaddrs.map(multiaddr => multiaddr.toString());
+    return multiaddrStrings;
+}
+
+console.log("Multiaddr of test node:", getMultiaddrs(test_node));
+
 function parseMultiaddr(multiaddr) {
+    console.log(multiaddr);
     const components = multiaddr.split('/');
     const result = {
         networkProtocol: '',
@@ -427,3 +482,6 @@ async function exchangeData(node, peerId, data) {
 }
 
 main()
+console.log("PeerID of test node:", getPeerID(test_node));
+console.log("Public Key from test node:", getPublicKeyFromNode(test_node));
+console.log("Private Key from test node:", getPrivateKeyFromNode(test_node));
