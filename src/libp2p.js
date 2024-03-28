@@ -9,7 +9,7 @@ import { kadDHT } from '@libp2p/kad-dht'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { ping } from '@libp2p/ping' // remove this after done testing
 import { bootstrap } from '@libp2p/bootstrap'
-
+import {mdns} from '@libp2p/mdns';
 
 import grpc from '@grpc/grpc-js';
 import protoLoader from '@grpc/proto-loader';
@@ -53,7 +53,39 @@ const test_node = await createLibp2p({
             protocolPrefix: 'ipfs',
         }),
     }
-})
+});
+
+(async () => {
+    const test_node2 = await createLibp2p({
+        addresses: {
+        // add a listen address (localhost) to accept TCP connections on a random port
+            listen: ['/ip4/0.0.0.0/tcp/0']
+        },
+        transports: [
+            tcp()
+        ],
+        streamMuxers: [
+            yamux()
+        ],
+        connectionEncryption: [
+            noise()
+        ],
+        peerDiscovery: [
+            mdns()
+        ]
+    });
+
+    console.log("test_node2 peerId: ", test_node2.peerId);
+
+    // Listen for peer discovery events
+    test_node2.addEventListener('peer:discovery', (evt) => {
+        console.log('found peer: ', evt.detail.toString())
+        console.log('event', evt.detail);
+    })
+
+    await test_node2.start();
+    console.log('libp2p node started:', test_node2.peerId.toString());
+})();
 
 // Setting up a websocket to exchange with the gui
 import { WebSocket } from 'ws';
