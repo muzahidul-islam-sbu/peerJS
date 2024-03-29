@@ -2,7 +2,6 @@
 import process from 'node:process'
 import { createLibp2p } from 'libp2p'
 import { tcp } from '@libp2p/tcp'
-// import { websockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
 import { multiaddr } from '@multiformats/multiaddr'
 import { kadDHT } from '@libp2p/kad-dht'
