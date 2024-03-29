@@ -9,7 +9,7 @@ import { kadDHT } from '@libp2p/kad-dht'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { ping } from '@libp2p/ping' // remove this after done testing
 import { bootstrap } from '@libp2p/bootstrap'
-
+import {mdns} from '@libp2p/mdns';
 
 import grpc from '@grpc/grpc-js';
 import protoLoader from '@grpc/proto-loader';
@@ -20,6 +20,11 @@ const __dirname = dirname(__filename);
 
 import { generateKeyPair} from '@libp2p/crypto/keys'
 import { peerIdFromKeys } from '@libp2p/peer-id'
+import readline from 'readline';
+
+// Setting up a websocket to exchange with the gui
+import { WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
 
 // libp2p node logic
 const test_node = await createLibp2p({
@@ -53,7 +58,113 @@ const test_node = await createLibp2p({
             protocolPrefix: 'ipfs',
         }),
     }
-})
+});
+
+const tonyMultiaddr = multiaddr('/ip4/172.25.87.26/tcp/63820/p2p/12D3KooWGNmUsoaUNuHENbbk4Yg7euUwbCi4H9RNgtPoYkkAWJFH');
+const discoveredPeers = new Map();
+
+/**
+ * display the menu 
+ * display a message everytime a peerId is found
+ * 
+ */
+
+const test_node2 = await createLibp2p({
+    addresses: {
+        // add a listen address (localhost) to accept TCP connections on a random port
+        listen: ['/ip4/0.0.0.0/tcp/0']
+    },
+    transports: [
+        tcp()
+    ],
+    streamMuxers: [
+        yamux()
+    ],
+    connectionEncryption: [
+        noise()
+    ],
+    peerDiscovery: [
+        mdns()
+    ]
+});
+
+await test_node2.start();
+console.log('Test Node 2 has started:', test_node2.peerId);
+
+test_node2.addEventListener('peer:discovery', async (evt) => {
+    const peerId = evt.detail.id;
+    const randomWord = generateRandomWord();
+    discoveredPeers.set(randomWord, peerId);
+    console.log('\nDiscovered Peer with PeerId: ', peerId);
+    displayMenu(discoveredPeers, test_node2);
+});
+
+// test_node2.addEventListener('peer:connect', (peerId) => {
+//     console.log(`Connection established with ${peerId}`);
+//     console.log("Peers you are currently connected to:");
+//     console.log(test_node2.getPeers());
+// });
+
+function displayMenu(discoveredPeers, node) {
+    const r1 = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+    
+    function displayOptions() {
+        console.log("\nMenu Options:");
+        console.log("1. List discovered peers");
+        console.log("2. Connect to a local peer");
+        console.log("3. List connected peers");
+        console.log("5. Connect to GUI");
+        console.log("6. Make a market transaction???");
+        console.log("7. Connect to a public peer");
+        console.log("8. Exit");
+
+        r1.question("\nEnter your choice: ", async (choice) => {
+            switch (choice) {
+                case '1':
+                    console.log("Peers that are discovered:", discoveredPeers);
+                    displayOptions();
+                    break;
+                case '2':
+                    console.log("Peers available for connection:");
+                    discoveredPeers.forEach((peerId, randomWord) => {
+                        console.log(`${randomWord}, ${peerId}`);
+                    });
+                    r1.question("\nEnter the 5-letter word of the peer you want to connect to: ", async (word) => {
+                        const selectedPeerId = discoveredPeers.get(word);
+                        if (selectedPeerId) {
+                            try {
+                                console.log(`\nConnecting to ${selectedPeerId}...`);
+                                await node.dial(selectedPeerId);
+                                console.log(`Connected to ${selectedPeerId}`);
+                            } catch (error) {
+                                console.error(`Failed to connect to ${selectedPeerId}`);
+                            }
+                        } else {
+                            console.log("Invalid word. Please try again");
+                        }
+                        displayOptions();
+                    });
+                    break;
+                case '3':
+                    console.log("Peers you are currently connected to:");
+                    console.log(node.getPeers());
+                    displayOptions();
+                    break;
+                case '4':
+                    await node.stop();
+                    console.log("Node has stopped");
+                    console.log("Exiting...");
+                    r1.close();
+                    process.exit();
+                case '5':
+                    const ws = new WebSocketServer({ port: 5174 }) // Server
+                    // const ws = new WebSocket('ws://localhost:5174'); // Client
+        }
+    })
+}}
 
 // let friendMultiaddr = '/ip4/192.168.1.160/tcp/55259/p2p/12D3KooWSuVFVZ5go9jDdpUWxUNbqsGwPsmjTD7DwHnYPvs4uP7c'
 // try {
@@ -77,10 +188,6 @@ const test_node = await createLibp2p({
 //     console.log(`Discovered peer: ${peerInfo.id.toB58String()}`);
 //     console.log('Multiaddresses:', peerInfo.multiaddrs.map((ma) => ma.toString()));
 // });
-
-// Setting up a websocket to exchange with the gui
-import { WebSocket } from 'ws';
-import { WebSocketServer } from 'ws';
 
 async function main() {
     // For now we'll just create one node
