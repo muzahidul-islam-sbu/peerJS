@@ -22,6 +22,10 @@ import { generateKeyPair} from '@libp2p/crypto/keys'
 import { peerIdFromKeys } from '@libp2p/peer-id'
 import readline from 'readline';
 
+// Setting up a websocket to exchange with the gui
+import { WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+
 // libp2p node logic
 const test_node = await createLibp2p({
     // peerId: customPeerId,
@@ -110,9 +114,12 @@ function displayMenu(discoveredPeers, node) {
     function displayOptions() {
         console.log("\nMenu Options:");
         console.log("1. List discovered peers");
-        console.log("2. Connect to a peer");
+        console.log("2. Connect to a local peer");
         console.log("3. List connected peers");
-        console.log("4. Exit");
+        console.log("5. Connect to GUI");
+        console.log("6. Make a market transaction???");
+        console.log("7. Connect to a public peer");
+        console.log("8. Exit");
 
         r1.question("\nEnter your choice: ", async (choice) => {
             switch (choice) {
@@ -143,7 +150,7 @@ function displayMenu(discoveredPeers, node) {
                     break;
                 case '3':
                     console.log("Peers you are currently connected to:");
-                    node.getPeers();
+                    console.log(node.getPeers());
                     displayOptions();
                     break;
                 case '4':
@@ -152,6 +159,72 @@ function displayMenu(discoveredPeers, node) {
                     console.log("Exiting...");
                     r1.close();
                     process.exit();
+                case '5':
+                    const ws = new WebSocketServer({ port: 5174 }) // Server
+                    // const ws = new WebSocket('ws://localhost:5174'); // Client
+
+                    console.log("Now opening up websocket connection to GUI...")
+                    // When a client connects to the WebSocket server
+                    ws.on('connection', (ws) => {
+                        console.log('Client connected');
+                
+                        // Handle requests from the GUI 
+                        ws.on('message', (message) => {
+                            console.log('Request: ', message.toString());
+                            if (message.toString() === 'GET_DATA') {
+                                console.log("received GET request")
+                                // // If the message is 'GET_DATA', send the peer node information to the client
+                                // const peerNodeInfo = {
+                                //   // Example peer node information
+                                //   id: 'peerNode123',
+                                //   address: '127.0.0.1',
+                                //   port: 8080,
+                                //   // Add other relevant information as needed
+                                // };
+                          
+                                // // Convert the peer node information to JSON and send it back to the client
+                                // ws.send(JSON.stringify(peerNodeInfo));
+                                // Send response with header type NODE_INFO
+                                ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
+                              }
+                    
+                            // if (parsedData.type === 'NODE_INFO') {
+                        });
+                        // Send a welcome message to the client
+                        ws.send('Welcome to the WebSocket server!');
+                    });
+                
+                    ws.on('error', (error) => {
+                        console.error('WebSocket error:', error);
+                    });
+                    break;
+                case '6':
+                    console.log("Make a market transaction");
+                    break;
+                case '7':
+                    console.log("Connect to a public peer node:");
+                    r1.question("\nEnter IP Address of public node you're connecting to: ", async (ipAddress) => {
+                        r1.question("\nEnter Port number the node you're connecting to is listening on: ", async (portNumber) => {
+                            r1.question("\nEnter the Peer ID: ", async (peerID) => {
+                                let userInputMultiAddr = multiaddr(`/ip4/${ipAddress}/tcp/${portNumber}/p2p/${peerID}`);
+                                console.log("Your multiaddress string is: ", userInputMultiAddr);
+                                try {
+                                    console.log(`\nConnecting to ${userInputMultiAddr}...`);
+                                    await node.dial(userInputMultiAddr);
+                                    console.log(`Connected to ${userInputMultiAddr}`);
+                                } catch (error) {
+                                    console.error(`Failed to connect to ${userInputMultiAddr}`);
+                                    console.log(error)
+                                    console.error(`Please confirm you answered all of the questions correctly and that firewall rules have been adjusted for port ${portNumber}`);
+                                }
+                                displayOptions();
+                            });
+                        });
+                    });
+                    break;
+                case '8':
+                    console.log("Make a market transaction");
+                    break;
                 default:
                     console.log("Invalid Choice");
                     displayOptions();
@@ -257,15 +330,9 @@ function generateRandomWord() {
     return word;
 }
 
-// Setting up a websocket to exchange with the gui
-import { WebSocket } from 'ws';
-import { WebSocketServer } from 'ws';
-
 async function main() {
     // For now we'll just create one node
     // test_node = createNode()
-    const ws = new WebSocketServer({ port: 5174 }) // Server
-    // const ws = new WebSocket('ws://localhost:5174'); // Client
 
     // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
     const NodeMap = new Map();
@@ -280,44 +347,6 @@ async function main() {
     // When node information is requested, send it to the GUI
     const nodeInfo = getPeerID(test_node);
     // const nodePublicKey = getPublicKeyFromNode(test_node);
-
-    console.log("Now opening up websocket connection...")
-
-    // When a client connects to the WebSocket server
-    ws.on('connection', (ws) => {
-        console.log('Client connected');
-
-        // Handle requests from the GUI 
-        ws.on('message', (message) => {
-            console.log('Request: ', message.toString());
-            if (message.toString() === 'GET_DATA') {
-                console.log("received GET request")
-
-                // // If the message is 'GET_DATA', send the peer node information to the client
-                // const peerNodeInfo = {
-                //   // Example peer node information
-                //   id: 'peerNode123',
-                //   address: '127.0.0.1',
-                //   port: 8080,
-                //   // Add other relevant information as needed
-                // };
-          
-                // // Convert the peer node information to JSON and send it back to the client
-                // ws.send(JSON.stringify(peerNodeInfo));
-                // Send response with header type NODE_INFO
-                ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
-              }
-    
-            // if (parsedData.type === 'NODE_INFO') {
-        });
-
-        // Send a welcome message to the client
-        ws.send('Welcome to the WebSocket server!');
-    });
-
-    ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
-    });
 
     // printKeyPair();
 
