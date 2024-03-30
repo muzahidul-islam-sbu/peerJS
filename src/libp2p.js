@@ -62,7 +62,7 @@ const discoveredPeers = new Map();
 const test_node2 = await createLibp2p({
     addresses: {
         // add a listen address (localhost) to accept TCP connections on a random port
-        listen: ['/ip4/192.168.1.160/tcp/90']
+        listen: ['/ip4/0.0.0.0/tcp/0']
     },
     transports: [
         tcp()
@@ -82,6 +82,17 @@ await test_node2.start();
 console.log('Test Node 2 has started:', test_node2.peerId);
 console.log("Actively searching for peers on the local network...");
 // console.log("Multiaddr of Test Node 2:", getMultiaddrs(test_node2));
+
+// const selectedPeerAddr = multiaddr('/ip4/146.190.129.133/tcp/36077/p2p/12D3KooWEfxnYQskJ6wjVts6pNdyFbw4uPcV6LtfEMdWpbEKkxYk')
+// try {
+//     console.log(`\nConnecting to ${selectedPeerAddr}...`);
+//     await test_node2.dial(selectedPeerAddr);
+//     console.log(`Connected to ${selectedPeerAddr}`);
+// } catch (error) {
+//     console.log(error)
+//     console.error(`Failed to connect to ${selectedPeerAddr}`);
+// }
+
 
 // const testid = '12D3KooWGFvxLfn6kh2dwC9f23rAZ2QaECb87VDDez2AHqDyZgga';
 // const peertestid = peerIdFromString(testid);
@@ -198,17 +209,6 @@ function displayMenu(discoveredPeers, node) {
 
     displayOptions();
 }
-
-// const selectedPeerId = multiaddr('/ip4/146.190.129.133/tcp/90/p2p/12D3KooWBxuQTmG1UH9mXRvNX8VioT1CyywoFgCbyoEgEoEiG96R')
-// try {
-//     console.log(`\nConnecting to ${selectedPeerId}...`);
-//     await test_node2.dial(selectedPeerId);
-//     console.log(`Connected to ${selectedPeerId}`);
-// } catch (error) {
-//     console.log(error)
-//     console.error(`Failed to connect to ${selectedPeerId}`);
-// }
-
 
 function generateRandomWord() {
     const letters = 'abcdefghijklmnopqrstuvwxyz';
