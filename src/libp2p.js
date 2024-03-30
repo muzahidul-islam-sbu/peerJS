@@ -103,6 +103,19 @@ test_node2.addEventListener('peer:discovery', async (evt) => {
 //     console.log("Peers you are currently connected to:");
 //     console.log(test_node2.getPeers());
 // });
+async function connectToPeer(ipAddress, portNumber, peerID) {
+    let userInputMultiAddr = multiaddr(`/ip4/${ipAddress}/tcp/${portNumber}/p2p/${peerID}`);
+    console.log("Your multiaddress string is: ", userInputMultiAddr);
+    try {
+        console.log(`\nConnecting to ${userInputMultiAddr}...`);
+        await node.dial(userInputMultiAddr);
+        console.log(`Connected to ${userInputMultiAddr}`);
+    } catch (error) {
+        console.error(`Failed to connect to ${userInputMultiAddr}`);
+        console.log(error)
+        console.error(`Please confirm you answered all of the questions correctly and that firewall rules have been adjusted for port ${portNumber}`);
+    }
+}
 
 function displayMenu(discoveredPeers, node) {
     const r1 = readline.createInterface({
@@ -211,12 +224,13 @@ function displayMenu(discoveredPeers, node) {
                                     console.log(`\nConnecting to ${userInputMultiAddr}...`);
                                     await node.dial(userInputMultiAddr);
                                     console.log(`Connected to ${userInputMultiAddr}`);
+                                    displayOptions();
                                 } catch (error) {
                                     console.error(`Failed to connect to ${userInputMultiAddr}`);
                                     console.log(error)
                                     console.error(`Please confirm you answered all of the questions correctly and that firewall rules have been adjusted for port ${portNumber}`);
+                                    displayOptions();
                                 }
-                                displayOptions();
                             });
                         });
                     });
