@@ -1,8 +1,16 @@
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import grpc from '@grpc/grpc-js';
+import protoLoader from '@grpc/proto-loader';
+import fs from 'fs';
+import * as path from 'path';
+
+// Get the directory name of the current module file
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 // Loading in the proto and market server stuff
-var PROTO_PATH = __dirname + '/../Market/market.proto';
-var grpc = require('@grpc/grpc-js');
-var protoLoader = require('@grpc/proto-loader');
-var packageDefinition = protoLoader.loadSync(
+const PROTO_PATH = __dirname + '/../Market/market.proto';
+const packageDefinition = protoLoader.loadSync(
     PROTO_PATH, {
         keepCase: true,
         longs: String,
@@ -10,17 +18,12 @@ var packageDefinition = protoLoader.loadSync(
         defaults: true,
         oneofs: true
     });
-var marketObject = grpc.loadPackageDefinition(packageDefinition).market;
+const marketObject = grpc.loadPackageDefinition(packageDefinition).market;
 // market is a stub -> allows us to call the protobuf service methods specified in the market server
-var market = new marketObject.Market('localhost:50051', grpc.credentials.createInsecure());
-
-// Library stuff
-const http = require('http');
-const fs = require('fs');
-
+const market = new marketObject.Market('localhost:50051', grpc.credentials.createInsecure());
 // Can call Consumer.(method they want)
 // ex: Consumer.viewProducers("lsfli3394ljfdsj")
-class Consumer {
+export class Consumer {
     /*
         Description:
             Asks the market server to send all the producers currently serving the file.
@@ -146,5 +149,3 @@ class Consumer {
     //     });
     // }
 }
-
-module.exports = { Consumer };
