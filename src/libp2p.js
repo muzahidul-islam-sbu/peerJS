@@ -123,8 +123,9 @@ function displayMenu(discoveredPeers, node) {
     function displayOptions() {
         console.log("\nMenu Options:");
         console.log("1. List discovered peers");
-        console.log("2. Connect to a local peer");
+        console.log("2. List known information on a peer");
         console.log("3. List connected peers");
+        console.log("4. Retrieve a peers public key");
         console.log("5. Connect to GUI");
         console.log("6. Make a market transaction???");
         console.log("7. Connect to a public peer");
@@ -181,29 +182,6 @@ function displayMenu(discoveredPeers, node) {
                         displayOptions();
                     });
                     break;
-                case '5':
-                    rl.question("\nEnter Multiaddr of Peer to connect to: ", async (maddr) => {
-                        const parsedMultiaddr = parseMultiaddr(maddr);
-                        const peerId = peerIdFromString(parsedMultiaddr.p2pPeerID);
-                        if (peerId) {
-                            try {
-                                console.log(`\nConnecting to ${peerId}`);
-                                await test_node2.dial(peerId);
-                                console.log(`Connected to ${peerId}`);
-                            } catch (error) {
-                                console.log(error);
-                                console.error(`Failed to connect to ${peerId}`);
-                            }
-                        }
-                        displayOptions();
-                    });
-                    break;
-                case '6':
-                    await node.stop();
-                    console.log("Node has stopped");
-                    console.log("Exiting...");
-                    rl.close();
-                    process.exit();
                 case '5':
                     const ws = new WebSocketServer({ port: 5174 }) // Server
                     // const ws = new WebSocket('ws://localhost:5174'); // Client
@@ -268,8 +246,11 @@ function displayMenu(discoveredPeers, node) {
                     });
                     break;
                 case '8':
-                    console.log("Make a market transaction");
-                    break;
+                    await node.stop();
+                    console.log("Node has stopped");
+                    console.log("Exiting...");
+                    rl.close();
+                    process.exit();
                 default:
                     console.log("Invalid Choice");
                     displayOptions();
