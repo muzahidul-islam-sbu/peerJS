@@ -83,20 +83,24 @@ const test_node2 = await createLibp2p({
         noise()
     ],
     peerDiscovery: [
-        mdns()
+        mdns({
+            enabled: false,  // Enable mDNS peer discovery
+            interval: 1000, // Set the interval for mDNS discovery (optional)
+            broadcast: true // Enable mDNS broadcasting (optional)
+        }),
     ]
 });
 
 await test_node2.start();
 console.log('Test Node 2 has started:', test_node2.peerId);
 
-test_node2.addEventListener('peer:discovery', async (evt) => {
-    const peerId = evt.detail.id;
-    const randomWord = generateRandomWord();
-    discoveredPeers.set(randomWord, peerId);
-    console.log('\nDiscovered Peer with PeerId: ', peerId);
-    displayMenu(discoveredPeers, test_node2);
-});
+// test_node2.addEventListener('peer:discovery', async (evt) => {
+//     const peerId = evt.detail.id;
+//     const randomWord = generateRandomWord();
+//     discoveredPeers.set(randomWord, peerId);
+//     console.log('\nDiscovered Peer with PeerId: ', peerId);
+//     displayMenu(discoveredPeers, test_node2);
+// });
 
 // test_node2.addEventListener('peer:connect', (peerId) => {
 //     console.log(`Connection established with ${peerId}`);
@@ -732,4 +736,14 @@ async function exchangeData(node, peerId, data) {
     }
 }
 
+function test() {
+    test_node2.addEventListener('peer:discovery', async (evt) => {
+        const peerId = evt.detail.id;
+        const randomWord = generateRandomWord();
+        discoveredPeers.set(randomWord, peerId);
+        console.log('\nDiscovered Peer with PeerId: ', peerId);
+    });
+    displayMenu(discoveredPeers, test_node2);
+}
 // main()
+test()
