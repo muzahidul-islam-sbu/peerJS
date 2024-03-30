@@ -10,7 +10,7 @@ import { send, handler } from './fileExchange.js'
 
 // Known peers addresses
 const bootstrapMultiaddrs = [
-    '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt'
+    '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt',
 ]
 
 async function createNode () {
@@ -25,7 +25,7 @@ async function createNode () {
         },
         peerDiscovery: [
             bootstrap({
-                list: [bootstrapMultiaddrs]
+                list: bootstrapMultiaddrs
             })
         ],   
         addresses: {
@@ -37,6 +37,7 @@ async function createNode () {
 
 async function run() {
     const node = await createNode();
+    await node.start();
     node.addEventListener('peer:discovery', (evt) => {
         console.log('Discovered %s', evt.detail.id.toString()) // Log discovered peer
     })
@@ -64,10 +65,16 @@ async function run() {
         
         // Dial to the consumer peer 
         const consumerMA = multiaddr(addr)
-        const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.0')
-        
-        console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.0')
-        send(stream, filepath, node, consumerMA);
+        console.log('Dialing')
+        try {
+            const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.0')
+            console.log(consumerMA, addr)
+            // await node.dial(consumerMA);
+            
+            console.log('Dialed')
+            console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.0')
+            send(stream, filepath, node, consumerMA);
+        } catch (err) {console.log(err)}
     })
 
     node.handle('/fileExchange/1.0.0', ({ stream }) => {
