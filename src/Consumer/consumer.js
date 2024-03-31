@@ -20,7 +20,7 @@ const packageDefinition = protoLoader.loadSync(
     });
 const marketObject = grpc.loadPackageDefinition(packageDefinition).market;
 // market is a stub -> allows us to call the protobuf service methods specified in the market server
-const market = new marketObject.Market('localhost:50051', grpc.credentials.createInsecure());
+const market = new marketObject.Market('172.174.239.70:50051', grpc.credentials.createInsecure());
 // Can call Consumer.(method they want)
 // ex: Consumer.viewProducers("lsfli3394ljfdsj")
 export class Consumer {
