@@ -1,5 +1,4 @@
 import { createLibp2p } from 'libp2p'
-import { webSockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { bootstrap } from '@libp2p/bootstrap'
@@ -7,14 +6,23 @@ import { kadDHT } from '@libp2p/kad-dht'
 import { multiaddr } from 'multiaddr'
 import { tcp } from '@libp2p/tcp'
 import { send, handler } from './fileExchange.js'
+import peerIdJson from './peer-id.js'
+import PeerId from 'peer-id';
+import { createFromJSON } from '@libp2p/peer-id-factory'
+import { pipe } from 'it-pipe'
+import map from 'it-map'
+import * as lp from 'it-length-prefixed'
+import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
+import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
 
 // Known peers addresses
 const bootstrapMultiaddrs = [
     '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt',
 ]
 
-async function createNode () {
+async function createNode (id) {
     return createLibp2p({
+        peerId: id,
         transports: [tcp()],
         connectionEncryption: [noise()],
         streamMuxers: [yamux()],
@@ -36,7 +44,8 @@ async function createNode () {
 }
 
 async function run() {
-    const node = await createNode();
+    const id = await createFromJSON(peerIdJson);
+    const node = await createNode(id);
     await node.start();
     node.addEventListener('peer:discovery', (evt) => {
         console.log('Discovered %s', evt.detail.id.toString()) // Log discovered peer
@@ -60,24 +69,61 @@ async function run() {
 
     process.stdin.on('data', async (input) => {
         const inputString = input.toString().trim();
-        const [addr, filepath] = inputString.split(' '); // Split input by space
-        console.log('Sending file');
-        
-        // Dial to the consumer peer 
-        const consumerMA = multiaddr(addr)
-        console.log('Dialing')
-        try {
-            const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.0')
-            console.log(consumerMA, addr)
-            // await node.dial(consumerMA);
+        const [type, addr, filepath] = inputString.split(' '); // Split input by space
+
+        if (type == 'request') {
+            const curAddr = node.getMultiaddrs()[0].toString();
+            console.log('Requesting file', curAddr);
             
-            console.log('Dialed')
-            console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.0')
-            send(stream, filepath, node, consumerMA);
-        } catch (err) {console.log(err)}
+            // Dial to the producer peer 
+            const producerMA = multiaddr(addr)
+            console.log('Dialing')
+            try {
+                const stream = await node.dialProtocol(producerMA, '/fileExchange/1.0.0');
+                await pipe(
+                    [curAddr + ' ' + filepath], 
+                    // Turn strings into buffers
+                    (source) => map(source, (string) => uint8ArrayFromString(string)),
+                    // Encode with length prefix (so receiving side knows how much data is coming)
+                    (source) => lp.encode(source),
+                    stream.sink
+                );
+                await stream.close();
+            } catch (err) {console.log(err)}
+        } else if (type == 'send') {
+            // Dial to the consumer peer 
+            const consumerMA = multiaddr(addr)
+            console.log('Dialing')
+            try {
+                const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
+                console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.0')
+                send(stream, filepath, node, consumerMA);
+            } catch (err) {console.log(err)}
+        }
     })
 
-    node.handle('/fileExchange/1.0.0', ({ stream }) => {
+    node.handle('/fileExchange/1.0.0', async ({ stream }) => {
+        console.log('Sending File')
+        await pipe(
+            stream.source,
+            // Decode length-prefixed data
+            (source) => lp.decode(source),
+            // Turn buffers into strings
+            (source) => map(source, (buf) => uint8ArrayToString(buf.subarray())),
+            async function (source) {
+                for await (var message of source) {
+                    console.log('Requesting: ' + message)
+                    // const consumerMA = multiaddr(consumerAddr);
+                    // const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
+                    // send(stream, filepath, node, consumerMA);
+                }
+            }
+        )
+        await stream.close();
+        // handler(stream);
+    })
+
+    node.handle('/fileExchange/1.0.1', ({ stream }) => {
         console.log('Downloading File')
         handler(stream);
     })
@@ -94,10 +140,12 @@ async function run() {
     process.on('SIGINT', stop)
 }
 
+const createId = async () => {
+    const id = await PeerId.create({ bits: 1024, keyType: 'RSA' })
+    console.log((id.toJSON()))
+}
+
 run();
-// const targetAddr = multiaddr('/ip4/192.168.56.1/tcp/64982/p2p/12D3KooWSKQuMtG6Nck5CjpjcoK1kSXEjQ3yinkMMjDUSoAdGacT')
-// try {
-    //     await node.dial(targetAddr)
-    // } catch (err) {
-//     console.log(err)
-// }
+
+// run once
+// createId();
