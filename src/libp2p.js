@@ -215,7 +215,27 @@ function displayMenu(discoveredPeers, node) {
                     });
                     break;
                 case '6':
+                    // Finish configuring this to work with the market
                     console.log("Make a market transaction");
+                    const PROTO_PATH = __dirname + '/protos/helloworld.proto';
+
+                    // Loading package specified in proto file
+                    const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+                        keepCase: true,
+                        longs: String,
+                        enums: String,
+                        defaults: true,
+                        oneofs: true
+                    });
+                    let helloworld_proto = grpc.loadPackageDefinition(packageDefinition).helloworld;
+
+                    // Create a gRPC client for the SendFile RPC method
+                    let client = new helloworld_proto.FileSender('localhost:50051', grpc.credentials.createInsecure());
+
+                    client.addFile({ hash: "12974", ip: "127.12.12", port: "80", price: "123" }, function (err, response) {
+                        console.log(response);
+                        console.log(err)
+                    });
                     break;
                 case '7':
                     console.log("Connect to a public peer node:");
@@ -345,35 +365,6 @@ function generateRandomWord() {
         word += letters.charAt(Math.floor(Math.random() * letters.length));
     }
     return word;
-}
-
-async function main() {
-    // For now we'll just create one node
-    // test_node = createNode()
-
-    // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
-    const NodeMap = new Map();
-
-    getPeerID(test_node);
-    getPublicKeyFromNode(test_node);
-
-    const publicKey = getPublicKeyFromNode(test_node)
-
-    console.log("public key belongs to this node: ", await verifyNode(test_node, publicKey));
-
-    // When node information is requested, send it to the GUI
-    const nodeInfo = getPeerID(test_node);
-    // const nodePublicKey = getPublicKeyFromNode(test_node);
-
-    // printKeyPair();
-
-    // Can manage creation of nodes here
-    // For example, subscribe to events, handle incoming messages, etc.
-    // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
-
-    // Forcefully quit main
-    // process.on('SIGTERM', stop);
-    // process.on('SIGINT', stop);
 }
 
 /**
@@ -744,6 +735,35 @@ function test() {
         console.log('\nDiscovered Peer with PeerId: ', peerId);
     });
     displayMenu(discoveredPeers, test_node2);
+}
+
+async function main() {
+    // For now we'll just create one node
+    // test_node = createNode()
+
+    // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
+    const NodeMap = new Map();
+
+    getPeerID(test_node);
+    getPublicKeyFromNode(test_node);
+
+    const publicKey = getPublicKeyFromNode(test_node)
+
+    console.log("public key belongs to this node: ", await verifyNode(test_node, publicKey));
+
+    // When node information is requested, send it to the GUI
+    const nodeInfo = getPeerID(test_node);
+    // const nodePublicKey = getPublicKeyFromNode(test_node);
+
+    // printKeyPair();
+
+    // Can manage creation of nodes here
+    // For example, subscribe to events, handle incoming messages, etc.
+    // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
+
+    // Forcefully quit main
+    // process.on('SIGTERM', stop);
+    // process.on('SIGINT', stop);
 }
 // main()
 test()
