@@ -230,7 +230,8 @@ function displayMenu(discoveredPeers, node) {
         console.log("5. Connect to GUI");
         console.log("6. Make a market transaction???");
         console.log("7. Connect to a public peer");
-        console.log("8. Exit");
+        console.log("8. Send Message");
+        console.log("9. Exit");
 
         rl.question("\nEnter your choice: ", async (choice) => {
             switch (choice) {
@@ -371,6 +372,34 @@ function displayMenu(discoveredPeers, node) {
                     });
                     break;
                 case '8':
+                    console.log("Peers available:");
+                    discoveredPeers.forEach((peerInfo, randomWord) => {
+                        console.log(`${randomWord}, ${peerInfo.peerId}`);
+                    });
+                    rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
+                        const selectedPeerInfo = discoveredPeers.get(word);
+                        const selectedPeerId = selectedPeerInfo.peerId;
+                        if (selectedPeerId) {
+                            try {
+                                const { stream } = await test_node2.dialProtocol(selectedPeerId, '/chat/1.0.0');
+                                console.log(stream.stream);
+                                stream.stream.on('data', (data) => {
+                                    console.log('Received message on Node A:', data.toString());
+                                })
+
+                                stream.stream.write(Buffer.from('Hello from Node A')); // may have to pipe instead
+
+                            } catch (error) {
+                                console.log(error)
+                                console.error(`Failed to set up communication channel  ${selectedPeerId}`);
+                            }
+                        } else {
+                            console.log("Invalid peer. Please try again");
+                        }
+                        displayOptions();
+                    });
+                    break;
+                case '9':
                     await node.stop();
                     console.log("Node has stopped");
                     console.log("Exiting...");
