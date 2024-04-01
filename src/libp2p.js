@@ -25,7 +25,7 @@ import readline from 'readline';
 import { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
 
-
+import {sendMessage, handleMessage} from './protocol.js';
 import geoip from 'geoip-lite';
 
 const ip = '146.190.129.133';
@@ -132,7 +132,7 @@ test_node2.addEventListener('peer:discovery', (evt) => {
 
     ipAddresses.forEach(ip => {
         const location = geoip.lookup(ip);
-        peerInfo = createPeerInfo(location, peerId);
+        peerInfo = createPeerInfo(location, peerId, multiaddrs[1]);
     });
 
     // console.log(evt.detail);
@@ -179,7 +179,7 @@ function getKeyByValue(map, value) {
     return null; 
 }
 
-function createPeerInfo(location, peerId) {
+function createPeerInfo(location, peerId, multiaddr) {
     const locationInfo = location !== null ? {
         city: location.city,
         state: location.region,
@@ -190,6 +190,7 @@ function createPeerInfo(location, peerId) {
 
     const peerInfo = {
         peerId: peerId,
+        multiaddr: multiaddr,
         location: locationInfo
     };
 
@@ -350,10 +351,11 @@ function displayMenu(discoveredPeers, node) {
                     rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
                         const selectedPeerInfo = discoveredPeers.get(word);
                         const selectedPeerId = selectedPeerInfo.peerId;
+                        const selectedPeerMA = selectedPeerInfo.multiaddr;
                         if (selectedPeerId) {
                             try {
                                 rl.question("\nEnter Message to be sent: ", async(message) => {
-                                    const stream = await node.dialProtocol(selectedPeerId, '/protocol/1.0.0');
+                                    const stream = await node.dialProtocol(selectedPeerMA, '/protocol/1.0.0');
                                     console.log('test_node2 dials to receiver: on protocol /protocol/1.0.0')
                                     sendMessage(stream, node, selectedPeerId, message);
                                 });
