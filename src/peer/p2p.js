@@ -18,7 +18,12 @@ import https from 'https';
 import { Producer as producer } from '../Producer/producer.js';
 import { Consumer as consumer } from '../Consumer/consumer.js';
 
+import crypto from 'crypto';
+import { readFileSync, readdir } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const port = 50936;
 let publicIP;
 const fetchPublicIP = () => {
@@ -100,7 +105,7 @@ async function run() {
         const type = inputString.split(' ')[0];
 
         if (type == 'request') {
-            const [_, prodIp, prodPort, prodId, filepath] = inputString.split(' '); // Split input by space
+            const [_, prodIp, prodPort, prodId, fileHash] = inputString.split(' '); // Split input by space
             const curAddr = publicMultiaddr;
             
             // Dial to the producer peer 
@@ -109,7 +114,7 @@ async function run() {
             try {
                 const stream = await node.dialProtocol(producerMA, '/fileExchange/1.0.0');
                 await pipe(
-                    [curAddr + ' ' + filepath], 
+                    [curAddr + ' ' + fileHash], 
                     // Turn strings into buffers
                     (source) => map(source, (string) => uint8ArrayFromString(string)),
                     // Encode with length prefix (so receiving side knows how much data is coming)
@@ -120,14 +125,25 @@ async function run() {
                 console.log('Requested file');
             } catch (err) {console.log(err)}
         } else if (type == 'send') {
-            let [_, addr, filepath] = inputString.split(' '); // Split input by space
-            filepath = 'testProducerFiles/' + filepath;
+            let [_, addr, fileHash] = inputString.split(' '); // Split input by space
+            let actualPath = ''
+            readdir('testProducerFiles/', (err, files) => {
+                for (const file of files) {
+                    const filePath = join(__dirname, 'testProducerFiles/', file);
+                    const fileContent = readFileSync(filePath);
+                    const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
+                    
+                    if (fileHash == hash) {
+                        actualPath = filePath;
+                    }
+                }
+            })
             // Dial to the consumer peer 
             const consumerMA = multiaddr(addr)
             try {
                 const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
                 console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.1')
-                send(stream, filepath, node, consumerMA);
+                send(stream, actualPath, node, consumerMA);
             } catch (err) {console.log(err)}
         } else if (type == 'register') {
             let [_, name, price, hash] = inputString.split(' '); // Split input by space
@@ -136,6 +152,12 @@ async function run() {
         } else if (type == 'viewProducers') {
             let [_, hash] = inputString.split(' '); // Split input by space
             consumer.viewProducers(hash);
+        } else if (type == 'hash') {
+            let [_, fileName] = inputString.split(' '); // Split input by space
+            const filePath = join(__dirname, 'testProducerFiles/', fileName);
+            const fileContent = readFileSync(filePath);
+            const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
+            console.log('Filehash: ', fileHash);
         }
     })
 
