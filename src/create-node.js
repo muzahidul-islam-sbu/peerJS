@@ -31,6 +31,12 @@ const node = await createLibp2p({
 await node.start();
 console.log('node has started:', node.peerId);
 
+node.handle('/protocol/1.0.0', ({ stream }) => {
+    console.log('Receiving Message')
+    handleMesage(stream);
+})
+
+
 // Protocol ID for the custom protocol
 const CUSTOM_PROTOCOL_ID = '/chat/1.0.0';
 

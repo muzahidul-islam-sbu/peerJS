@@ -109,7 +109,8 @@ console.log("Actively searching for peers on the local network...");
 // const peertestid = peerIdFromString(testid);
 
 const ipAddresses = [];
-let local_peer_node_info = {}
+let local_peer_node_info = {};
+
 test_node2.addEventListener('peer:discovery', (evt) => {
     const peerId = evt.detail.id;
     const multiaddrs = evt.detail.multiaddrs;
@@ -132,7 +133,7 @@ test_node2.addEventListener('peer:discovery', (evt) => {
     ipAddresses.forEach(ip => {
         const location = geoip.lookup(ip);
         peerInfo = createPeerInfo(location, peerId);
-    })
+    });
 
     // console.log(evt.detail);
     // Get non 127... multiaddr and convert the object into a string for parsing
@@ -153,6 +154,7 @@ test_node2.addEventListener('peer:discovery', (evt) => {
     console.log('\nDiscovered Peer with PeerId: ', peerId);
     // console.log("IP addresses for this event:", ipAddresses);
 });
+
 
 test_node2.addEventListener('peer:disconnect', (evt) => {
     const peerId = evt.detail;
@@ -178,6 +180,14 @@ function getKeyByValue(map, value) {
 }
 
 function createPeerInfo(location, peerId) {
+    const locationInfo = location !== null ? {
+        city: location.city,
+        state: location.region,
+        country: location.country,
+        latitude: location.ll[0],
+        longitude: location.ll[1]
+    } : null;
+
     const locationInfo = location !== null ? {
         city: location.city,
         state: location.region,
@@ -231,6 +241,7 @@ function displayMenu(discoveredPeers, node) {
         console.log("6. Make a market transaction???");
         console.log("7. Connect to a public peer");
         console.log("8. Send Message");
+        console.log("9. Send Message")
         console.log("9. Exit");
 
         rl.question("\nEnter your choice: ", async (choice) => {
@@ -381,16 +392,12 @@ function displayMenu(discoveredPeers, node) {
                         const selectedPeerId = selectedPeerInfo.peerId;
                         if (selectedPeerId) {
                             try {
-                                const { stream } = await test_node2.dialProtocol(selectedPeerId, '/chat/1.0.0');
-                                console.log(stream.stream);
-                                stream.stream.on('data', (data) => {
-                                    console.log('Received message on Node A:', data.toString());
-                                })
-
-                                stream.stream.write(Buffer.from('Hello from Node A')); // may have to pipe instead
-
+                                rl.question("\nEnter Message to be sent: ", async(message) => {
+                                    const stream = await node.dialProtocol(selectedPeerId, '/protocol/1.0.0');
+                                    console.log('test_node2 dials to receiver: on protocol /protocol/1.0.0')
+                                    sendMessage(stream, node, selectedPeerId, message);
+                                });
                             } catch (error) {
-                                console.log(error)
                                 console.error(`Failed to set up communication channel  ${selectedPeerId}`);
                             }
                         } else {
