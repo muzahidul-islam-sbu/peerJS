@@ -19,7 +19,6 @@ const __dirname = dirname(__filename);
 
 import { generateKeyPair} from '@libp2p/crypto/keys'
 import { peerIdFromKeys, peerIdFromString } from '@libp2p/peer-id'
-import { peerIdFromKeys, peerIdFromString } from '@libp2p/peer-id'
 import readline from 'readline';
 
 // Setting up a websocket to exchange with the gui
@@ -102,19 +101,19 @@ console.log("Actively searching for peers on the local network...");
 // const testid = '12D3KooWGFvxLfn6kh2dwC9f23rAZ2QaECb87VDDez2AHqDyZgga';
 // const peertestid = peerIdFromString(testid);
 let local_peer_node_info = {}
-
 test_node2.addEventListener('peer:discovery', (evt) => {
     const peerId = evt.detail.id;
-    console.log(evt.detail);
+    // console.log(evt.detail);
     // Get non 127... multiaddr and convert the object into a string for parsing
     const nonlocalMultaddr = evt.detail.multiaddrs.filter(addr => !addr.toString().startsWith('/ip4/127.0.0.')).toString();
-    console.log(nonlocalMultaddr);
+    // console.log(nonlocalMultaddr);
     // Extract IP address
     const ipAddress = nonlocalMultaddr.split('/')[2];
     // Extract port number
     const portNumber = nonlocalMultaddr.split('/')[4];
-    console.log('IP address:', ipAddress); // Output: 192.168.1.2
-    console.log('Port number:', portNumber); // Output: 55617
+    // console.log('IP address:', ipAddress);
+    // console.log('Port number:', portNumber);
+
     local_peer_node_info = {ip_address: ipAddress, port : portNumber}
 
     const randomWord = generateRandomWord();
@@ -122,35 +121,6 @@ test_node2.addEventListener('peer:discovery', (evt) => {
     console.log('\nDiscovered Peer with PeerId: ', peerId);
 });
 
-test_node2.addEventListener('peer:disconnect', (evt) => {
-    const peerId = evt.detail;
-    console.log(`\nPeer with ${peerId} disconnected`)
-    const keyToRemove = getKeyByValue(discoveredPeers, peerId);
-    if (keyToRemove !== null) {
-        discoveredPeers.delete(keyToRemove);
-    } else {
-        console.log("PeerId not found in the map.");
-    }
-});
-
-function getKeyByValue(map, value) {
-    const peerIdToRemove = value.toString();
-    for (let [key, val] of map.entries()) {
-        let valString = val.toString();
-        if (valString === peerIdToRemove) {
-            return key;
-        }
-    }
-    return null; 
-}
-
-displayMenu(discoveredPeers, test_node2);
-
-/**
- * TODO:
- * -transfer files
- * -conduct a wallet transfer
- */
 test_node2.addEventListener('peer:disconnect', (evt) => {
     const peerId = evt.detail;
     console.log(`\nPeer with ${peerId} disconnected`)
@@ -318,7 +288,6 @@ function displayMenu(discoveredPeers, node) {
                     rl.close();
                     process.exit();
                 default:
-                    console.log("Invalid Choice");
                     displayOptions();
             }
         });
