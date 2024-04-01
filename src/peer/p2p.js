@@ -1,5 +1,4 @@
 import { createLibp2p } from 'libp2p'
-import { webSockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { bootstrap } from '@libp2p/bootstrap'
@@ -7,14 +6,45 @@ import { kadDHT } from '@libp2p/kad-dht'
 import { multiaddr } from 'multiaddr'
 import { tcp } from '@libp2p/tcp'
 import { send, handler } from './fileExchange.js'
+import peerIdJson from './peer-id.js'
+import PeerId from 'peer-id';
+import { createFromJSON } from '@libp2p/peer-id-factory'
+import { pipe } from 'it-pipe'
+import map from 'it-map'
+import * as lp from 'it-length-prefixed'
+import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
+import { toString as uint8ArrayToString } from 'uint8arrays/to-string'
+import https from 'https';
+import { Producer as producer } from '../Producer/producer.js';
+import { Consumer as consumer } from '../Consumer/consumer.js';
+
+
+const port = 50936;
+let publicIP;
+const fetchPublicIP = () => {
+    return new Promise((resolve, reject) => {
+        https.get('https://api.ipify.org?format=json', (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+            publicIP = JSON.parse(data).ip;
+            resolve(publicIP);
+        });
+        }).on('error', (error) => {
+        reject(error);
+        });
+    });
+};
+
 
 // Known peers addresses
 const bootstrapMultiaddrs = [
-    '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt'
+    '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt',
 ]
 
-async function createNode () {
+async function createNode (id) {
     return createLibp2p({
+        peerId: id,
         transports: [tcp()],
         connectionEncryption: [noise()],
         streamMuxers: [yamux()],
@@ -25,52 +55,111 @@ async function createNode () {
         },
         peerDiscovery: [
             bootstrap({
-                list: [bootstrapMultiaddrs]
+                list: bootstrapMultiaddrs
             })
         ],   
         addresses: {
             // add a listen address (localhost) to accept TCP connections on a random port
-            listen: ['/ip4/0.0.0.0/tcp/0']
+            listen: ['/ip4/0.0.0.0/tcp/50936']
         },
     })
 }
 
 async function run() {
-    const node = await createNode();
-    node.addEventListener('peer:discovery', (evt) => {
-        console.log('Discovered %s', evt.detail.id.toString()) // Log discovered peer
-    })
+    await fetchPublicIP();
+    const id = await createFromJSON(peerIdJson);
+    const node = await createNode(id);
+    await node.start();
+    // node.addEventListener('peer:discovery', (evt) => {
+    //     console.log('Discovered %s', evt.detail.id.toString()) // Log discovered peer
+    // })
 
-    node.addEventListener('peer:connect', (evt) => {
-        console.log('Connected to %s', evt.detail.toString()) // Log connected peer
-    })
+    // node.addEventListener('peer:connect', (evt) => {
+    //     console.log('Connected to %s', evt.detail.toString()) // Log connected peer
+    // })
 
-    node.addEventListener('peer:disconnect', (evt) => {
-        const remotePeer = evt.detail
-        console.log('disconnected to: ', remotePeer.toString())
-    })
+    // node.addEventListener('peer:disconnect', (evt) => {
+    //     const remotePeer = evt.detail
+    //     console.log('disconnected to: ', remotePeer.toString())
+    // })
 
     console.log('Node has started: ', node.peerId)
 
-    console.log('libp2p is listening on the following addresses: ')
-    node.getMultiaddrs().forEach((addr) => {
-        console.log(addr.toString())
-    })
+    console.log('libp2p is listening on the following address: ')
+    // node.getMultiaddrs().forEach((addr) => {
+    //     console.log(addr.toString())
+    // })
+    let addr = node.getMultiaddrs()[0].toString();
+    let parts = addr.split('/');
+    parts[2] = publicIP;
+    const publicMultiaddr = parts.join('/');
+    console.log(publicMultiaddr);
 
     process.stdin.on('data', async (input) => {
         const inputString = input.toString().trim();
-        const [addr, filepath] = inputString.split(' '); // Split input by space
-        console.log('Sending file');
-        
-        // Dial to the consumer peer 
-        const consumerMA = multiaddr(addr)
-        const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.0')
-        
-        console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.0')
-        send(stream, filepath, node, consumerMA);
+        const type = inputString.split(' ')[0];
+
+        if (type == 'request') {
+            const [_, prodIp, prodPort, prodId, filepath] = inputString.split(' '); // Split input by space
+            const curAddr = publicMultiaddr;
+            
+            // Dial to the producer peer 
+            const addr = '/ip4/' + prodIp + '/tcp/' + prodPort + '/p2p/' + prodId; 
+            const producerMA = multiaddr(addr)
+            try {
+                const stream = await node.dialProtocol(producerMA, '/fileExchange/1.0.0');
+                await pipe(
+                    [curAddr + ' ' + filepath], 
+                    // Turn strings into buffers
+                    (source) => map(source, (string) => uint8ArrayFromString(string)),
+                    // Encode with length prefix (so receiving side knows how much data is coming)
+                    (source) => lp.encode(source),
+                    stream.sink
+                    );
+                    await stream.close();
+                console.log('Requested file');
+            } catch (err) {console.log(err)}
+        } else if (type == 'send') {
+            let [_, addr, filepath] = inputString.split(' '); // Split input by space
+            filepath = 'testProducerFiles/' + filepath;
+            // Dial to the consumer peer 
+            const consumerMA = multiaddr(addr)
+            try {
+                const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
+                console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.1')
+                send(stream, filepath, node, consumerMA);
+            } catch (err) {console.log(err)}
+        } else if (type == 'register') {
+            let [_, name, price, hash] = inputString.split(' '); // Split input by space
+            price = parseInt(price);
+            producer.registerFile(hash, node.peerId.toString(), name, publicIP, port, price);
+        } else if (type == 'viewProducers') {
+            let [_, hash] = inputString.split(' '); // Split input by space
+            consumer.viewProducers(hash);
+        }
     })
 
-    node.handle('/fileExchange/1.0.0', ({ stream }) => {
+    node.handle('/fileExchange/1.0.0', async ({ stream }) => {
+        await pipe(
+            stream.source,
+            // Decode length-prefixed data
+            (source) => lp.decode(source),
+            // Turn buffers into strings
+            (source) => map(source, (buf) => uint8ArrayToString(buf.subarray())),
+            async function (source) {
+                for await (var message of source) {
+                    console.log('Requesting: ' + message)
+                    // const consumerMA = multiaddr(consumerAddr);
+                    // const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
+                    // send(stream, filepath, node, consumerMA);
+                }
+            }
+        )
+        await stream.close();
+        // handler(stream);
+    })
+
+    node.handle('/fileExchange/1.0.1', ({ stream }) => {
         console.log('Downloading File')
         handler(stream);
     })
@@ -87,10 +176,12 @@ async function run() {
     process.on('SIGINT', stop)
 }
 
+const createId = async () => {
+    const id = await PeerId.create({ bits: 1024, keyType: 'RSA' })
+    console.log((id.toJSON()))
+}
+
 run();
-// const targetAddr = multiaddr('/ip4/192.168.56.1/tcp/64982/p2p/12D3KooWSKQuMtG6Nck5CjpjcoK1kSXEjQ3yinkMMjDUSoAdGacT')
-// try {
-    //     await node.dial(targetAddr)
-    // } catch (err) {
-//     console.log(err)
-// }
+
+// run once
+// createId();
