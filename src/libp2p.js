@@ -105,15 +105,37 @@ test_node2.addEventListener('peer:discovery', (evt) => {
     const randomWord = generateRandomWord();
     discoveredPeers.set(randomWord, peerId);
     console.log('\nDiscovered Peer with PeerId: ', peerId);
-    displayMenu(discoveredPeers, test_node2);
 });
 
-// test_node2.addEventListener('peer:connect', (peerId) => {
-//     console.log(`Connection established with ${peerId}`);
-//     console.log("Peers you are currently connected to:");
-//     console.log(test_node2.getPeers());
-// });
+test_node2.addEventListener('peer:disconnect', (evt) => {
+    const peerId = evt.detail;
+    console.log(`\nPeer with ${peerId} disconnected`)
+    const keyToRemove = getKeyByValue(discoveredPeers, peerId);
+    if (keyToRemove !== null) {
+        discoveredPeers.delete(keyToRemove);
+    } else {
+        console.log("PeerId not found in the map.");
+    }
+});
 
+function getKeyByValue(map, value) {
+    const peerIdToRemove = value.toString();
+    for (let [key, val] of map.entries()) {
+        let valString = val.toString();
+        if (valString === peerIdToRemove) {
+            return key;
+        }
+    }
+    return null; 
+}
+
+displayMenu(discoveredPeers, test_node2);
+
+/**
+ * TODO:
+ * -transfer files
+ * -conduct a wallet transfer
+ */
 function displayMenu(discoveredPeers, node) {
     const rl = readline.createInterface({
         input: process.stdin,
