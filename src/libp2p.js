@@ -89,6 +89,52 @@ const test_node2 = await createLibp2p({
     ]
 });
 
+// Protocol ID for the custom protocol
+const CUSTOM_PROTOCOL_ID = '/chat/1.0.0';
+
+// Register protocol handler on the sending node
+test_node2.handle(CUSTOM_PROTOCOL_ID, ({ stream, protocol }) => {
+    console.log(`Sending Node: Received incoming connection for protocol ${protocol}`);
+    
+    // Handle incoming data on the stream
+    stream.on('data', (data) => {
+        console.log(`Sending Node: Received data: ${data.toString()}`);
+        // Handle the received data
+    });
+});
+
+export async function handleMessage(stream) {
+    // Handle incoming message for your protocol
+    let receivedData = Buffer.alloc(0); // Initialize an empty buffer to accumulate received data
+
+    await pipe(
+        stream,
+        async function(source) {
+            for await (const buffer of source) {
+              for await (const buf of buffer){
+                console.log('buffer: ', buf);
+                receivedData = Buffer.concat([receivedData, buf]);
+              }
+            }
+        }
+    );
+    console.log("data: ", receivedData);
+};
+
+export async function sendMessage(stream, node, peerId, message) {
+    try {
+        // Convert the message to Uint8Array
+        const messageUint8Array = stringToUint8Array(message);
+
+        // Write the message to the stream
+        await pipe([messageUint8Array], stream.sink);
+
+        console.log(`Sent message to ${peerId}:`, message);
+    } catch (error) {
+        console.error(`Failed to send message to ${peerId}:`, error);
+    }
+}
+
 await test_node2.start();
 console.log('Test Node 2 has started:', test_node2.peerId);
 console.log("Actively searching for peers on the local network...");
@@ -188,14 +234,6 @@ function createPeerInfo(location, peerId) {
         longitude: location.ll[1]
     } : null;
 
-    const locationInfo = location !== null ? {
-        city: location.city,
-        state: location.region,
-        country: location.country,
-        latitude: location.ll[0],
-        longitude: location.ll[1]
-    } : null;
-
     const peerInfo = {
         peerId: peerId,
         location: locationInfo
@@ -241,7 +279,6 @@ function displayMenu(discoveredPeers, node) {
         console.log("6. Make a market transaction???");
         console.log("7. Connect to a public peer");
         console.log("8. Send Message");
-        console.log("9. Send Message")
         console.log("9. Exit");
 
         rl.question("\nEnter your choice: ", async (choice) => {
@@ -389,7 +426,7 @@ function displayMenu(discoveredPeers, node) {
                     });
                     rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
                         const selectedPeerInfo = discoveredPeers.get(word);
-                        const selectedPeerId = selectedPeerInfo.peerId;
+                        const selectedPeerId = selectedPeerInfo.peerId; multiaddr("12D3KooWMAEhmVENArH9Jup7DU9PcViP58EyV6nyoMTZ1wqnyvJP/")
                         if (selectedPeerId) {
                             try {
                                 rl.question("\nEnter Message to be sent: ", async(message) => {

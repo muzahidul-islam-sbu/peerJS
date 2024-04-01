@@ -38,7 +38,7 @@ node.handle('/protocol/1.0.0', ({ stream }) => {
 
 
 // Protocol ID for the custom protocol
-const CUSTOM_PROTOCOL_ID = '/chat/1.0.0';
+const CUSTOM_PROTOCOL_ID = '/protocol/1.0.0';
 
 // Register protocol handlers with libp2p node
 node.handle(CUSTOM_PROTOCOL_ID, ({ stream, protocol }) => {
