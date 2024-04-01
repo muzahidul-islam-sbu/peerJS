@@ -182,7 +182,6 @@ displayMenu(discoveredPeers, test_node2);
  */
 function displayMenu(discoveredPeers, node) {
     const rl = readline.createInterface({
-    const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
@@ -191,16 +190,13 @@ function displayMenu(discoveredPeers, node) {
         console.log("\nMenu Options:");
         console.log("1. List discovered peers");
         console.log("2. List known information on a peer");
-        console.log("2. List known information on a peer");
         console.log("3. List connected peers");
-        console.log("4. Retrieve a peers public key");
         console.log("4. Retrieve a peers public key");
         console.log("5. Connect to GUI");
         console.log("6. Make a market transaction???");
         console.log("7. Connect to a public peer");
         console.log("8. Exit");
 
-        rl.question("\nEnter your choice: ", async (choice) => {
         rl.question("\nEnter your choice: ", async (choice) => {
             switch (choice) {
                 case '1':
@@ -209,24 +205,19 @@ function displayMenu(discoveredPeers, node) {
                     break;
                 case '2':
                     console.log("Peers available:");
-                    console.log("Peers available:");
                     discoveredPeers.forEach((peerId, randomWord) => {
                         console.log(`${randomWord}, ${peerId}`);
                     });
-                    rl.question("\nEnter the 5-letter word of the peer you want to find information on: ", async (word) => {
                     rl.question("\nEnter the 5-letter word of the peer you want to find information on: ", async (word) => {
                         const selectedPeerId = discoveredPeers.get(word);
                         if (selectedPeerId) {
                             try {
                                 const peer = await node.peerStore.get(selectedPeerId)
                                 console.log("Known information about this peer: ", peer)
-                                const peer = await node.peerStore.get(selectedPeerId)
-                                console.log("Known information about this peer: ", peer)
                             } catch (error) {
                                 console.error(`Failed to connect to ${selectedPeerId}`);
                             }
                         } else {
-                            console.log("Invalid peer. Please try again");
                             console.log("Invalid peer. Please try again");
                         }
                         displayOptions();
@@ -238,25 +229,6 @@ function displayMenu(discoveredPeers, node) {
                     displayOptions();
                     break;
                 case '4':
-                    console.log("Peers available:");
-                    discoveredPeers.forEach((peerId, randomWord) => {
-                        console.log(`${randomWord}, ${peerId}`);
-                    });
-                    rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
-                        const selectedPeerId = discoveredPeers.get(word);
-                        if (selectedPeerId) {
-                            try {
-                                const publicKey = await node.getPublicKey(selectedPeerId);
-                                console.log("Public Key of Peer: ", publicKey);
-                            } catch (error) {
-                                console.error(`Failed to retrieve information of public key on  ${selectedPeerId}`);
-                            }
-                        } else {
-                            console.log("Invalid peer. Please try again");
-                        }
-                        displayOptions();
-                    });
-                    break;
                     console.log("Peers available:");
                     discoveredPeers.forEach((peerId, randomWord) => {
                         console.log(`${randomWord}, ${peerId}`);
@@ -340,11 +312,6 @@ function displayMenu(discoveredPeers, node) {
                     });
                     break;
                 case '8':
-                    await node.stop();
-                    console.log("Node has stopped");
-                    console.log("Exiting...");
-                    rl.close();
-                    process.exit();
                     await node.stop();
                     console.log("Node has stopped");
                     console.log("Exiting...");
@@ -512,10 +479,8 @@ function getPrivateKeyFromNode(node) {
  */
 
 async function verifyNode(peerId, publicKey) {
-async function verifyNode(peerId, publicKey) {
     const peerIdKey = await peerIdFromKeys(publicKey)
 
-    console.log("Peer ID: ", peerId);
     console.log("Peer ID: ", peerId);
     console.log("Peer ID from Key:", peerIdKey);
     
