@@ -31,18 +31,18 @@ const node = await createLibp2p({
 await node.start();
 console.log('node has started:', node.peerId);
 
-node.handle('/protocol/1.0.0', ({ stream }) => {
-    console.log('Receiving Message')
-    handleMesage(stream);
-})
+// node.handle('/protocol/1.0.0', ({ stream }) => {
+//     console.log('Receiving Message')
+//     handleMesage(stream);
+// })
 
 
 // Protocol ID for the custom protocol
 const CUSTOM_PROTOCOL_ID = '/protocol/1.0.0';
 
 // Register protocol handlers with libp2p node
-node.handle(CUSTOM_PROTOCOL_ID, ({ stream, protocol }) => {
-    console.log(`Received incoming connection for protocol ${protocol}`);
+node.handle(CUSTOM_PROTOCOL_ID, ({ stream }) => {
+    console.log(`Received incoming connection`);
     // Handle incoming connections for the custom protocol
     stream.on('data', (data) => {
         handleCustomProtocolMessage(stream.remotePeer, data);
