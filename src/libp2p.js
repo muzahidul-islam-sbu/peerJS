@@ -67,6 +67,7 @@ const test_node = await createLibp2p({
 });
 
 // const tonyMultiaddr = multiaddr('/ip4/172.25.87.26/tcp/63820/p2p/12D3KooWGNmUsoaUNuHENbbk4Yg7euUwbCi4H9RNgtPoYkkAWJFH');
+// const tonyMultiaddr = multiaddr('/ip4/172.25.87.26/tcp/63820/p2p/12D3KooWGNmUsoaUNuHENbbk4Yg7euUwbCi4H9RNgtPoYkkAWJFH');
 const discoveredPeers = new Map();
 
 const test_node2 = await createLibp2p({
@@ -108,7 +109,7 @@ console.log("Actively searching for peers on the local network...");
 // const peertestid = peerIdFromString(testid);
 
 const ipAddresses = [];
-
+let local_peer_node_info = {}
 test_node2.addEventListener('peer:discovery', (evt) => {
     const peerId = evt.detail.id;
     const multiaddrs = evt.detail.multiaddrs;
@@ -132,6 +133,19 @@ test_node2.addEventListener('peer:discovery', (evt) => {
         const location = geoip.lookup(ip);
         peerInfo = createPeerInfo(location, peerId);
     })
+
+    // console.log(evt.detail);
+    // Get non 127... multiaddr and convert the object into a string for parsing
+    const nonlocalMultaddr = evt.detail.multiaddrs.filter(addr => !addr.toString().startsWith('/ip4/127.0.0.')).toString();
+    // console.log(nonlocalMultaddr);
+    // Extract IP address
+    const ipAddress = nonlocalMultaddr.split('/')[2];
+    // Extract port number
+    const portNumber = nonlocalMultaddr.split('/')[4];
+    // console.log('IP address:', ipAddress);
+    // console.log('Port number:', portNumber);
+
+    local_peer_node_info = {ip_address: ipAddress, port : portNumber}
 
     const randomWord = generateRandomWord();
     discoveredPeers.set(randomWord, peerInfo);
@@ -275,19 +289,19 @@ function displayMenu(discoveredPeers, node) {
                             console.log('Request: ', message.toString());
                             if (message.toString() === 'GET_DATA') {
                                 console.log("received GET request")
-                                // // If the message is 'GET_DATA', send the peer node information to the client
-                                // const peerNodeInfo = {
-                                //   // Example peer node information
-                                //   id: 'peerNode123',
-                                //   address: '127.0.0.1',
-                                //   port: 8080,
-                                //   // Add other relevant information as needed
-                                // };
+                                // If the message is 'GET_DATA', send the peer node information to the client
+                                const peerNodeInfo = {
+                                  // Example peer node information
+                                  id: node.peerID,
+                                  address: local_peer_node_info.ip_address,
+                                  port: local_peer_node_info.port,
+                                  // Add other relevant information as needed
+                                };
                           
-                                // // Convert the peer node information to JSON and send it back to the client
-                                // ws.send(JSON.stringify(peerNodeInfo));
+                                // Convert the peer node information to JSON and send it back to the client
+                                ws.send(JSON.stringify(peerNodeInfo));
                                 // Send response with header type NODE_INFO
-                                ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
+                                // ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
                               }
                     
                             // if (parsedData.type === 'NODE_INFO') {
@@ -295,10 +309,10 @@ function displayMenu(discoveredPeers, node) {
                         // Send a welcome message to the client
                         ws.send('Welcome to the WebSocket server!');
                     });
-                
                     ws.on('error', (error) => {
                         console.error('WebSocket error:', error);
                     });
+                    displayOptions();
                     break;
                 case '6':
                     console.log("Make a market transaction");
@@ -336,7 +350,6 @@ function displayMenu(discoveredPeers, node) {
                     rl.close();
                     process.exit();
                 default:
-                    console.log("Invalid Choice");
                     displayOptions();
             }
         });
