@@ -109,7 +109,8 @@ console.log("Actively searching for peers on the local network...");
 // const peertestid = peerIdFromString(testid);
 
 const ipAddresses = [];
-let local_peer_node_info = {}
+let local_peer_node_info = {};
+
 test_node2.addEventListener('peer:discovery', (evt) => {
     const peerId = evt.detail.id;
     const multiaddrs = evt.detail.multiaddrs;
@@ -132,7 +133,7 @@ test_node2.addEventListener('peer:discovery', (evt) => {
     ipAddresses.forEach(ip => {
         const location = geoip.lookup(ip);
         peerInfo = createPeerInfo(location, peerId);
-    })
+    });
 
     // console.log(evt.detail);
     // Get non 127... multiaddr and convert the object into a string for parsing
@@ -153,6 +154,7 @@ test_node2.addEventListener('peer:discovery', (evt) => {
     console.log('\nDiscovered Peer with PeerId: ', peerId);
     // console.log("IP addresses for this event:", ipAddresses);
 });
+
 
 test_node2.addEventListener('peer:disconnect', (evt) => {
     const peerId = evt.detail;
@@ -178,22 +180,18 @@ function getKeyByValue(map, value) {
 }
 
 function createPeerInfo(location, peerId) {
+    const locationInfo = location !== null ? {
+        city: location.city,
+        state: location.region,
+        country: location.country,
+        latitude: location.ll[0],
+        longitude: location.ll[1]
+    } : null;
+
     const peerInfo = {
         peerId: peerId,
-        city: null,
-        state: null,
-        country: null,
-        latitude: null,
-        longitude: null
+        location: locationInfo
     };
-
-    if (location !== null) {
-        peerInfo.city = location.city;
-        peerInfo.state = location.region;
-        peerInfo.country = location.country;
-        peerInfo.latitude = location.ll[0];
-        peerInfo.longitude = location.ll[1];
-    }
 
     return peerInfo;
 }
@@ -220,7 +218,8 @@ function displayMenu(discoveredPeers, node) {
         console.log("5. Connect to GUI");
         console.log("6. Make a market transaction???");
         console.log("7. Connect to a public peer");
-        console.log("8. Exit");
+        console.log("8. Send Message")
+        console.log("9. Exit");
 
         rl.question("\nEnter your choice: ", async (choice) => {
             switch (choice) {
@@ -344,6 +343,30 @@ function displayMenu(discoveredPeers, node) {
                     });
                     break;
                 case '8':
+                    console.log("Peers available:");
+                    discoveredPeers.forEach((peerInfo, randomWord) => {
+                        console.log(`${randomWord}, ${peerInfo.peerId}`);
+                    });
+                    rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
+                        const selectedPeerInfo = discoveredPeers.get(word);
+                        const selectedPeerId = selectedPeerInfo.peerId;
+                        if (selectedPeerId) {
+                            try {
+                                rl.question("\nEnter Message to be sent: ", async(message) => {
+                                    const stream = await node.dialProtocol(selectedPeerId, '/protocol/1.0.0');
+                                    console.log('test_node2 dials to receiver: on protocol /protocol/1.0.0')
+                                    sendMessage(stream, node, selectedPeerId, message);
+                                });
+                            } catch (error) {
+                                console.error(`Failed to set up communication channel  ${selectedPeerId}`);
+                            }
+                        } else {
+                            console.log("Invalid peer. Please try again");
+                        }
+                        displayOptions();
+                    });
+                    break;
+                case '9':
                     await node.stop();
                     console.log("Node has stopped");
                     console.log("Exiting...");

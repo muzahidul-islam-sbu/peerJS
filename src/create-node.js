@@ -25,3 +25,8 @@ const node = await createLibp2p({
 
 await node.start();
 console.log('node has started:', node.peerId);
+
+node.handle('/protocol/1.0.0', ({ stream }) => {
+    console.log('Receiving Message')
+    handleMesage(stream);
+})
