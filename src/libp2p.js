@@ -126,29 +126,16 @@ test_node2.addEventListener('peer:discovery', (evt) => {
         }
     });
 
-    const peerInfo = new Object();
-    peerInfo.peerId = peerId;
+    let peerInfo = new Object();
 
     ipAddresses.forEach(ip => {
         const location = geoip.lookup(ip);
-        if (location !== null) {
-            peerInfo.city = location.city;
-            peerInfo.state = location.region;
-            peerInfo.country = location.country;
-            peerInfo.latitude = location.ll[0];
-            peerInfo.longitude = location.ll[1];
-        } else {
-            peerInfo.city = null;
-            peerInfo.state = null;
-            peerInfo.country = null;
-            peerInfo.latitude = null;
-            peerInfo.longitude = null;
-        }
+        peerInfo = createPeerInfo(location, peerId);
     })
 
     const randomWord = generateRandomWord();
     discoveredPeers.set(randomWord, peerInfo);
-    console.log("Discovered Peers: ", discoveredPeers);
+    // console.log("Discovered Peers: ", discoveredPeers);
     console.log('\nDiscovered Peer with PeerId: ', peerId);
     // console.log("IP addresses for this event:", ipAddresses);
 });
@@ -174,6 +161,27 @@ function getKeyByValue(map, value) {
         }
     }
     return null; 
+}
+
+function createPeerInfo(location, peerId) {
+    const peerInfo = {
+        peerId: peerId,
+        city: null,
+        state: null,
+        country: null,
+        latitude: null,
+        longitude: null
+    };
+
+    if (location !== null) {
+        peerInfo.city = location.city;
+        peerInfo.state = location.region;
+        peerInfo.country = location.country;
+        peerInfo.latitude = location.ll[0];
+        peerInfo.longitude = location.ll[1];
+    }
+
+    return peerInfo;
 }
 
 displayMenu(discoveredPeers, test_node2);
@@ -297,15 +305,20 @@ function displayMenu(discoveredPeers, node) {
                     break;
                 case '7':
                     console.log("Connect to a public peer node:");
-                    r1.question("\nEnter IP Address of public node you're connecting to: ", async (ipAddress) => {
-                        r1.question("\nEnter Port number the node you're connecting to is listening on: ", async (portNumber) => {
-                            r1.question("\nEnter the Peer ID: ", async (peerID) => {
+                    rl.question("\nEnter IP Address of public node you're connecting to: ", async (ipAddress) => {
+                        rl.question("\nEnter Port number the node you're connecting to is listening on: ", async (portNumber) => {
+                            rl.question("\nEnter the Peer ID: ", async (peerID) => {
                                 let userInputMultiAddr = multiaddr(`/ip4/${ipAddress}/tcp/${portNumber}/p2p/${peerID}`);
                                 console.log("Your multiaddress string is: ", userInputMultiAddr);
                                 try {
                                     console.log(`\nConnecting to ${userInputMultiAddr}...`);
                                     await node.dial(userInputMultiAddr);
                                     console.log(`Connected to ${userInputMultiAddr}`);
+                                    let peerInfo = new Object();
+                                    const location = geoip.lookup(ipAddress);
+                                    peerInfo = createPeerInfo(location, peerID);
+                                    const randomWord = generateRandomWord();
+                                    discoveredPeers.set(randomWord, peerInfo);
                                 } catch (error) {
                                     console.error(`Failed to connect to ${userInputMultiAddr}`);
                                     console.log(error)
