@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 import { generateKeyPair} from '@libp2p/crypto/keys'
-import { peerIdFromKeys } from '@libp2p/peer-id'
+import { peerIdFromKeys, peerIdFromString } from '@libp2p/peer-id'
 import readline from 'readline';
 
 // Setting up a websocket to exchange with the gui
@@ -59,14 +59,8 @@ const test_node = await createLibp2p({
     }
 });
 
-const tonyMultiaddr = multiaddr('/ip4/172.25.87.26/tcp/63820/p2p/12D3KooWGNmUsoaUNuHENbbk4Yg7euUwbCi4H9RNgtPoYkkAWJFH');
+// const tonyMultiaddr = multiaddr('/ip4/172.25.87.26/tcp/63820/p2p/12D3KooWGNmUsoaUNuHENbbk4Yg7euUwbCi4H9RNgtPoYkkAWJFH');
 const discoveredPeers = new Map();
-
-/**
- * display the menu 
- * display a message everytime a peerId is found
- * 
- */
 
 const test_node2 = await createLibp2p({
     addresses: {
@@ -83,46 +77,80 @@ const test_node2 = await createLibp2p({
         noise()
     ],
     peerDiscovery: [
-        mdns({
-            enabled: false,  // Enable mDNS peer discovery
-            interval: 1000, // Set the interval for mDNS discovery (optional)
-            broadcast: true // Enable mDNS broadcasting (optional)
-        }),
+        mdns()
     ]
 });
 
 await test_node2.start();
 console.log('Test Node 2 has started:', test_node2.peerId);
+console.log("Actively searching for peers on the local network...");
+// console.log("Multiaddr of Test Node 2:", getMultiaddrs(test_node2));
 
-// test_node2.addEventListener('peer:discovery', async (evt) => {
-//     const peerId = evt.detail.id;
-//     const randomWord = generateRandomWord();
-//     discoveredPeers.set(randomWord, peerId);
-//     console.log('\nDiscovered Peer with PeerId: ', peerId);
-//     displayMenu(discoveredPeers, test_node2);
-// });
+// const selectedPeerAddr = multiaddr('/ip4/146.190.129.133/tcp/36077/p2p/12D3KooWEfxnYQskJ6wjVts6pNdyFbw4uPcV6LtfEMdWpbEKkxYk')
+// try {
+//     console.log(`\nConnecting to ${selectedPeerAddr}...`);
+//     await test_node2.dial(selectedPeerAddr);
+//     console.log(`Connected to ${selectedPeerAddr}`);
+// } catch (error) {
+//     console.log(error)
+//     console.error(`Failed to connect to ${selectedPeerAddr}`);
+// }
 
-// test_node2.addEventListener('peer:connect', (peerId) => {
-//     console.log(`Connection established with ${peerId}`);
-//     console.log("Peers you are currently connected to:");
-//     console.log(test_node2.getPeers());
-// });
-async function connectToPeer(ipAddress, portNumber, peerID) {
-    let userInputMultiAddr = multiaddr(`/ip4/${ipAddress}/tcp/${portNumber}/p2p/${peerID}`);
-    console.log("Your multiaddress string is: ", userInputMultiAddr);
-    try {
-        console.log(`\nConnecting to ${userInputMultiAddr}...`);
-        await node.dial(userInputMultiAddr);
-        console.log(`Connected to ${userInputMultiAddr}`);
-    } catch (error) {
-        console.error(`Failed to connect to ${userInputMultiAddr}`);
-        console.log(error)
-        console.error(`Please confirm you answered all of the questions correctly and that firewall rules have been adjusted for port ${portNumber}`);
+
+// const testid = '12D3KooWGFvxLfn6kh2dwC9f23rAZ2QaECb87VDDez2AHqDyZgga';
+// const peertestid = peerIdFromString(testid);
+let local_peer_node_info = {}
+
+test_node2.addEventListener('peer:discovery', (evt) => {
+    const peerId = evt.detail.id;
+    console.log(evt.detail);
+    // Get non 127... multiaddr and convert the object into a string for parsing
+    const nonlocalMultaddr = evt.detail.multiaddrs.filter(addr => !addr.toString().startsWith('/ip4/127.0.0.')).toString();
+    console.log(nonlocalMultaddr);
+    // Extract IP address
+    const ipAddress = nonlocalMultaddr.split('/')[2];
+    // Extract port number
+    const portNumber = nonlocalMultaddr.split('/')[4];
+    console.log('IP address:', ipAddress); // Output: 192.168.1.2
+    console.log('Port number:', portNumber); // Output: 55617
+    local_peer_node_info = {ip_address: ipAddress, port : portNumber}
+
+    const randomWord = generateRandomWord();
+    discoveredPeers.set(randomWord, peerId);
+    console.log('\nDiscovered Peer with PeerId: ', peerId);
+});
+
+test_node2.addEventListener('peer:disconnect', (evt) => {
+    const peerId = evt.detail;
+    console.log(`\nPeer with ${peerId} disconnected`)
+    const keyToRemove = getKeyByValue(discoveredPeers, peerId);
+    if (keyToRemove !== null) {
+        discoveredPeers.delete(keyToRemove);
+    } else {
+        console.log("PeerId not found in the map.");
     }
+});
+
+function getKeyByValue(map, value) {
+    const peerIdToRemove = value.toString();
+    for (let [key, val] of map.entries()) {
+        let valString = val.toString();
+        if (valString === peerIdToRemove) {
+            return key;
+        }
+    }
+    return null; 
 }
 
+displayMenu(discoveredPeers, test_node2);
+
+/**
+ * TODO:
+ * -transfer files
+ * -conduct a wallet transfer
+ */
 function displayMenu(discoveredPeers, node) {
-    const r1 = readline.createInterface({
+    const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
@@ -130,36 +158,36 @@ function displayMenu(discoveredPeers, node) {
     function displayOptions() {
         console.log("\nMenu Options:");
         console.log("1. List discovered peers");
-        console.log("2. Connect to a local peer");
+        console.log("2. List known information on a peer");
         console.log("3. List connected peers");
+        console.log("4. Retrieve a peers public key");
         console.log("5. Connect to GUI");
         console.log("6. Make a market transaction???");
         console.log("7. Connect to a public peer");
         console.log("8. Exit");
 
-        r1.question("\nEnter your choice: ", async (choice) => {
+        rl.question("\nEnter your choice: ", async (choice) => {
             switch (choice) {
                 case '1':
                     console.log("Peers that are discovered:", discoveredPeers);
                     displayOptions();
                     break;
                 case '2':
-                    console.log("Peers available for connection:");
+                    console.log("Peers available:");
                     discoveredPeers.forEach((peerId, randomWord) => {
                         console.log(`${randomWord}, ${peerId}`);
                     });
-                    r1.question("\nEnter the 5-letter word of the peer you want to connect to: ", async (word) => {
+                    rl.question("\nEnter the 5-letter word of the peer you want to find information on: ", async (word) => {
                         const selectedPeerId = discoveredPeers.get(word);
                         if (selectedPeerId) {
                             try {
-                                console.log(`\nConnecting to ${selectedPeerId}...`);
-                                await node.dial(selectedPeerId);
-                                console.log(`Connected to ${selectedPeerId}`);
+                                const peer = await node.peerStore.get(selectedPeerId)
+                                console.log("Known information about this peer: ", peer)
                             } catch (error) {
                                 console.error(`Failed to connect to ${selectedPeerId}`);
                             }
                         } else {
-                            console.log("Invalid word. Please try again");
+                            console.log("Invalid peer. Please try again");
                         }
                         displayOptions();
                     });
@@ -170,11 +198,25 @@ function displayMenu(discoveredPeers, node) {
                     displayOptions();
                     break;
                 case '4':
-                    await node.stop();
-                    console.log("Node has stopped");
-                    console.log("Exiting...");
-                    r1.close();
-                    process.exit();
+                    console.log("Peers available:");
+                    discoveredPeers.forEach((peerId, randomWord) => {
+                        console.log(`${randomWord}, ${peerId}`);
+                    });
+                    rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
+                        const selectedPeerId = discoveredPeers.get(word);
+                        if (selectedPeerId) {
+                            try {
+                                const publicKey = await node.getPublicKey(selectedPeerId);
+                                console.log("Public Key of Peer: ", publicKey);
+                            } catch (error) {
+                                console.error(`Failed to retrieve information of public key on  ${selectedPeerId}`);
+                            }
+                        } else {
+                            console.log("Invalid peer. Please try again");
+                        }
+                        displayOptions();
+                    });
+                    break;
                 case '5':
                     const ws = new WebSocketServer({ port: 5174 }) // Server
                     // const ws = new WebSocket('ws://localhost:5174'); // Client
@@ -189,19 +231,19 @@ function displayMenu(discoveredPeers, node) {
                             console.log('Request: ', message.toString());
                             if (message.toString() === 'GET_DATA') {
                                 console.log("received GET request")
-                                // // If the message is 'GET_DATA', send the peer node information to the client
-                                // const peerNodeInfo = {
-                                //   // Example peer node information
-                                //   id: 'peerNode123',
-                                //   address: '127.0.0.1',
-                                //   port: 8080,
-                                //   // Add other relevant information as needed
-                                // };
+                                // If the message is 'GET_DATA', send the peer node information to the client
+                                const peerNodeInfo = {
+                                  // Example peer node information
+                                  id: node.peerID,
+                                  address: local_peer_node_info.ip_address,
+                                  port: local_peer_node_info.port,
+                                  // Add other relevant information as needed
+                                };
                           
-                                // // Convert the peer node information to JSON and send it back to the client
-                                // ws.send(JSON.stringify(peerNodeInfo));
+                                // Convert the peer node information to JSON and send it back to the client
+                                ws.send(JSON.stringify(peerNodeInfo));
                                 // Send response with header type NODE_INFO
-                                ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
+                                // ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
                               }
                     
                             // if (parsedData.type === 'NODE_INFO') {
@@ -209,33 +251,13 @@ function displayMenu(discoveredPeers, node) {
                         // Send a welcome message to the client
                         ws.send('Welcome to the WebSocket server!');
                     });
-                
                     ws.on('error', (error) => {
                         console.error('WebSocket error:', error);
                     });
+                    displayOptions();
                     break;
                 case '6':
-                    // Finish configuring this to work with the market
                     console.log("Make a market transaction");
-                    const PROTO_PATH = __dirname + '/protos/helloworld.proto';
-
-                    // Loading package specified in proto file
-                    const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-                        keepCase: true,
-                        longs: String,
-                        enums: String,
-                        defaults: true,
-                        oneofs: true
-                    });
-                    let helloworld_proto = grpc.loadPackageDefinition(packageDefinition).helloworld;
-
-                    // Create a gRPC client for the SendFile RPC method
-                    let client = new helloworld_proto.FileSender('localhost:50051', grpc.credentials.createInsecure());
-
-                    client.addFile({ hash: "12974", ip: "127.12.12", port: "80", price: "123" }, function (err, response) {
-                        console.log(response);
-                        console.log(err)
-                    });
                     break;
                 case '7':
                     console.log("Connect to a public peer node:");
@@ -248,20 +270,22 @@ function displayMenu(discoveredPeers, node) {
                                     console.log(`\nConnecting to ${userInputMultiAddr}...`);
                                     await node.dial(userInputMultiAddr);
                                     console.log(`Connected to ${userInputMultiAddr}`);
-                                    displayOptions();
                                 } catch (error) {
                                     console.error(`Failed to connect to ${userInputMultiAddr}`);
                                     console.log(error)
                                     console.error(`Please confirm you answered all of the questions correctly and that firewall rules have been adjusted for port ${portNumber}`);
-                                    displayOptions();
                                 }
+                                displayOptions();
                             });
                         });
                     });
                     break;
                 case '8':
-                    console.log("Make a market transaction");
-                    break;
+                    await node.stop();
+                    console.log("Node has stopped");
+                    console.log("Exiting...");
+                    rl.close();
+                    process.exit();
                 default:
                     console.log("Invalid Choice");
                     displayOptions();
@@ -272,92 +296,6 @@ function displayMenu(discoveredPeers, node) {
     displayOptions();
 }
 
-// displayMenu(discoveredPeers, test_node2);
-
-// (async () => {
-//     const test_node2 = await createLibp2p({
-//         addresses: {
-//             // add a listen address (localhost) to accept TCP connections on a random port
-//             listen: ['/ip4/0.0.0.0/tcp/0']
-//         },
-//         transports: [
-//             tcp()
-//         ],
-//         streamMuxers: [
-//             yamux()
-//         ],
-//         connectionEncryption: [
-//             noise()
-//         ],
-//         peerDiscovery: [
-//             mdns()
-//         ]
-//     });
-
-//     // console.log("test_node2 peerId: ", test_node2.peerId);
-//     // console.log("Multiaddr of test node 2:", getMultiaddrs(test_node2));
-
-//     // Listen for peer discovery events
-//     test_node2.addEventListener('peer:discovery', async (evt) => {
-//         const peerId = evt.detail.id;
-//         const randomWord = generateRandomWord();
-//         discoveredPeers.set(randomWord, peerId);
-//         console.log('Discovered Peer with PeerId: ', peerId);
-//         // console.log('event', evt.detail);
-//         console.log("Information of known peers on the network:", await test_node2.peerStore.get(peerId));
-//         await test_node2.dial(peerId);
-//         console.log(`Connected to ${peerId}`);
-//         console.log("Peers you are currently connected to:");
-//         test_node2.getPeers();
-//     });
-
-//     await test_node2.start();
-//     console.log('libp2p node started:', test_node2.peerId.toString());
-
-// const r1 = readline.createInterface({
-//     input: process.stdin,
-//     output: process.stdout
-// });
-
-// console.log("Menu Options:");
-// console.log("1. List discovered peers");
-// console.log("2. Connect to a peer");
-// console.log("3. List connected peers");
-
-// r1.question("Enter your choice: ", (choice) => {
-//     switch(choice) {
-//         case '1':
-//             console.log("Peers that are discovered:", discoveredPeers);
-//             break;
-//         case '2':
-//             console.log("Peers available for connection:");
-//             discoveredPeers.forEach((peerId, randomWord) => {
-//                 console.log(`${randomWord}, ${peerId}`);
-//             });
-//             r1.question("Enter the 5-letter word of the peer you want to connect to: ", async (word) => {
-//                 const selectedPeerId = discoveredPeers.get(word);
-//                 if(selectedPeerId) {
-//                     try {
-//                         console.log(`Connecting to ${selectedPeerId}...`);
-//                         await test_node2.dial(selectedPeerId);
-//                         console.log(`Connected to ${selectedPeerId}`);
-//                     } catch (error) {
-//                         console.error(`Failed to connect to ${selectedPeerId}`);
-//                     }
-//                 } else {
-//                     console.log("Invalid word. Please try again");
-//                 }
-//             });
-//             break;
-//         case '3':
-//             console.log("Peers you are currently connected to:");
-//             test_node2.getPeers();
-//         default:
-//             console.log("Invalid Choice");
-//     }
-// });
-// })();
-
 function generateRandomWord() {
     const letters = 'abcdefghijklmnopqrstuvwxyz';
     let word = '';
@@ -365,6 +303,35 @@ function generateRandomWord() {
         word += letters.charAt(Math.floor(Math.random() * letters.length));
     }
     return word;
+}
+
+async function main() {
+    // For now we'll just create one node
+    // test_node = createNode()
+
+    // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
+    const NodeMap = new Map();
+
+    getPeerID(test_node);
+    getPublicKeyFromNode(test_node);
+
+    const publicKey = getPublicKeyFromNode(test_node)
+
+    console.log("public key belongs to this node: ", await verifyNode(test_node, publicKey));
+
+    // When node information is requested, send it to the GUI
+    const nodeInfo = getPeerID(test_node);
+    // const nodePublicKey = getPublicKeyFromNode(test_node);
+
+    // printKeyPair();
+
+    // Can manage creation of nodes here
+    // For example, subscribe to events, handle incoming messages, etc.
+    // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
+
+    // Forcefully quit main
+    // process.on('SIGTERM', stop);
+    // process.on('SIGINT', stop);
 }
 
 /**
@@ -480,12 +447,10 @@ function getPrivateKeyFromNode(node) {
  * @returns {boolean} True if the key belongs to the node, otherwise false
  */
 
-async function verifyNode(node, publicKey) {
-
-    const peerId = getPeerID(node);
+async function verifyNode(peerId, publicKey) {
     const peerIdKey = await peerIdFromKeys(publicKey)
 
-    console.log("Peer ID from node:", peerId);
+    console.log("Peer ID: ", peerId);
     console.log("Peer ID from Key:", peerIdKey);
     
     const peerIdString = peerId.toString();
@@ -727,43 +692,4 @@ async function exchangeData(node, peerId, data) {
     }
 }
 
-function test() {
-    test_node2.addEventListener('peer:discovery', async (evt) => {
-        const peerId = evt.detail.id;
-        const randomWord = generateRandomWord();
-        discoveredPeers.set(randomWord, peerId);
-        console.log('\nDiscovered Peer with PeerId: ', peerId);
-    });
-    displayMenu(discoveredPeers, test_node2);
-}
-
-async function main() {
-    // For now we'll just create one node
-    // test_node = createNode()
-
-    // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
-    const NodeMap = new Map();
-
-    getPeerID(test_node);
-    getPublicKeyFromNode(test_node);
-
-    const publicKey = getPublicKeyFromNode(test_node)
-
-    console.log("public key belongs to this node: ", await verifyNode(test_node, publicKey));
-
-    // When node information is requested, send it to the GUI
-    const nodeInfo = getPeerID(test_node);
-    // const nodePublicKey = getPublicKeyFromNode(test_node);
-
-    // printKeyPair();
-
-    // Can manage creation of nodes here
-    // For example, subscribe to events, handle incoming messages, etc.
-    // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
-
-    // Forcefully quit main
-    // process.on('SIGTERM', stop);
-    // process.on('SIGINT', stop);
-}
 // main()
-test()
