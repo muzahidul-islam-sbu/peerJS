@@ -178,26 +178,36 @@ function getKeyByValue(map, value) {
 }
 
 function createPeerInfo(location, peerId) {
+    const locationInfo = location !== null ? {
+        city: location.city,
+        state: location.region,
+        country: location.country,
+        latitude: location.ll[0],
+        longitude: location.ll[1]
+    } : null;
+
     const peerInfo = {
         peerId: peerId,
-        city: null,
-        state: null,
-        country: null,
-        latitude: null,
-        longitude: null
+        location: locationInfo
     };
-
-    if (location !== null) {
-        peerInfo.city = location.city;
-        peerInfo.state = location.region;
-        peerInfo.country = location.country;
-        peerInfo.latitude = location.ll[0];
-        peerInfo.longitude = location.ll[1];
-    }
 
     return peerInfo;
 }
 
+function findPeerInfoByPeerId(peerMap, peerId) {
+    for (const [randomWord, info] of peerMap.entries()) {
+        console.log(info.peerId)
+        console.log(peerId)
+        if (info.peerId === peerId) {
+            console.log("ceck this: ")
+            console.log(info)
+            console.log(randomWord)
+            return info;
+        }
+    }
+    return null;
+}
+console.log("discover")
 displayMenu(discoveredPeers, test_node2);
 
 /**
@@ -290,18 +300,35 @@ function displayMenu(discoveredPeers, node) {
                             if (message.toString() === 'GET_DATA') {
                                 console.log("received GET request")
                                 // If the message is 'GET_DATA', send the peer node information to the client
+                                console.log(discoveredPeers === local_peer_node_info.peerID)
+                                const ipRegex = /\/ip4\/([^\s/]+)/;
+                                const match = getMultiaddrs(test_node2)[1].match(ipRegex);
+                                const ipAddress = match && match[1];
+
+                                const portRegex = "//tcp/(\d+)/";
+                                const match2 = getMultiaddrs(test_node2)[1].match(portRegex);
+                                const portNumber = match2 && match2[1];
+                                console.log("Port number:", portNumber);
+
+                                // TODO: Update this peer id as needed
+                                discoveredPeers
+            
+                                const peerInfo = findPeerInfoByPeerId(discoveredPeers, "12D3KooWSXZGdoTXPaXS7SzrA1oN1BoYLByn9KghndmC1aV2s7hZ"); 
+                                console.log("location")
+                                console.log(peerInfo)
+                                console.log(peerInfo.location)
                                 const peerNodeInfo = {
                                   // Example peer node information
-                                  id: node.peerID,
-                                  address: local_peer_node_info.ip_address,
-                                  port: local_peer_node_info.port,
-                                  // Add other relevant information as needed
+                                  id: "12D3KooWSXZGdoTXPaXS7SzrA1oN1BoYLByn9KghndmC1aV2s7hZ", 
+                                  address: "128.199.237.234",
+                                  port: "96",
+                                  location: peerInfo.location
                                 };
                           
                                 // Convert the peer node information to JSON and send it back to the client
-                                ws.send(JSON.stringify(peerNodeInfo));
+                                // ws.send(JSON.stringify(peerNodeInfo));
                                 // Send response with header type NODE_INFO
-                                // ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
+                                ws.send(JSON.stringify({ type: 'NODE_INFO', data: peerNodeInfo }));
                               }
                     
                             // if (parsedData.type === 'NODE_INFO') {
