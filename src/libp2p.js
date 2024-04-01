@@ -25,6 +25,13 @@ import readline from 'readline';
 import { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
 
+
+import geoip from 'geoip-lite';
+
+const ip = '146.190.129.133';
+const location = geoip.lookup(ip);
+console.log(location);
+
 // libp2p node logic
 const test_node = await createLibp2p({
     // peerId: customPeerId,
@@ -100,11 +107,50 @@ console.log("Actively searching for peers on the local network...");
 // const testid = '12D3KooWGFvxLfn6kh2dwC9f23rAZ2QaECb87VDDez2AHqDyZgga';
 // const peertestid = peerIdFromString(testid);
 
+const ipAddresses = [];
+
 test_node2.addEventListener('peer:discovery', (evt) => {
     const peerId = evt.detail.id;
+    const multiaddrs = evt.detail.multiaddrs;
+
+    ipAddresses.length = 0;
+
+    multiaddrs.forEach(ma => {
+        const multiaddrString = ma.toString();
+        const ipRegex = /\/ip4\/([^\s/]+)/;
+        const match = multiaddrString.match(ipRegex);
+        const ipAddress = match && match[1];
+
+        if(ipAddress) {
+            ipAddresses.push(ipAddress);
+        }
+    });
+
+    const peerInfo = new Object();
+    peerInfo.peerId = peerId;
+
+    ipAddresses.forEach(ip => {
+        const location = geoip.lookup(ip);
+        if (location !== null) {
+            peerInfo.city = location.city;
+            peerInfo.state = location.region;
+            peerInfo.country = location.country;
+            peerInfo.latitude = location.ll[0];
+            peerInfo.longitude = location.ll[1];
+        } else {
+            peerInfo.city = null;
+            peerInfo.state = null;
+            peerInfo.country = null;
+            peerInfo.latitude = null;
+            peerInfo.longitude = null;
+        }
+    })
+
     const randomWord = generateRandomWord();
-    discoveredPeers.set(randomWord, peerId);
+    discoveredPeers.set(randomWord, peerInfo);
+    console.log("Discovered Peers: ", discoveredPeers);
     console.log('\nDiscovered Peer with PeerId: ', peerId);
+    // console.log("IP addresses for this event:", ipAddresses);
 });
 
 test_node2.addEventListener('peer:disconnect', (evt) => {
@@ -121,8 +167,9 @@ test_node2.addEventListener('peer:disconnect', (evt) => {
 function getKeyByValue(map, value) {
     const peerIdToRemove = value.toString();
     for (let [key, val] of map.entries()) {
-        let valString = val.toString();
-        if (valString === peerIdToRemove) {
+        let peerId = val.peerId;
+        let peerIdString = peerId.toString();
+        if (peerIdString === peerIdToRemove) {
             return key;
         }
     }
@@ -161,11 +208,12 @@ function displayMenu(discoveredPeers, node) {
                     break;
                 case '2':
                     console.log("Peers available:");
-                    discoveredPeers.forEach((peerId, randomWord) => {
-                        console.log(`${randomWord}, ${peerId}`);
+                    discoveredPeers.forEach((peerInfo, randomWord) => {
+                        console.log(`${randomWord}, ${peerInfo.peerId}`);
                     });
                     rl.question("\nEnter the 5-letter word of the peer you want to find information on: ", async (word) => {
-                        const selectedPeerId = discoveredPeers.get(word);
+                        const selectedPeerInfo = discoveredPeers.get(word);
+                        const selectedPeerId = selectedPeerInfo.peerId;
                         if (selectedPeerId) {
                             try {
                                 const peer = await node.peerStore.get(selectedPeerId)
@@ -186,11 +234,12 @@ function displayMenu(discoveredPeers, node) {
                     break;
                 case '4':
                     console.log("Peers available:");
-                    discoveredPeers.forEach((peerId, randomWord) => {
-                        console.log(`${randomWord}, ${peerId}`);
+                    discoveredPeers.forEach((peerInfo, randomWord) => {
+                        console.log(`${randomWord}, ${peerInfo.peerId}`);
                     });
                     rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
-                        const selectedPeerId = discoveredPeers.get(word);
+                        const selectedPeerInfo = discoveredPeers.get(word);
+                        const selectedPeerId = selectedPeerInfo.peerId;
                         if (selectedPeerId) {
                             try {
                                 const publicKey = await node.getPublicKey(selectedPeerId);
