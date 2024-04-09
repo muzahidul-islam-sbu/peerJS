@@ -17,8 +17,7 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-import { generateKeyPair} from '@libp2p/crypto/keys'
-import { peerIdFromKeys, peerIdFromString } from '@libp2p/peer-id'
+import { getPublicKeyFromNode, getPrivateKeyFromNode, printKeyPair, verifyNode } from './public-private-key-pair.js'
 
 // Setting up a websocket to exchange with the gui
 import { WebSocket } from 'ws';
@@ -282,6 +281,7 @@ async function main() {
 
     getPeerID(test_node);
     getPublicKeyFromNode(test_node);
+    getPrivateKeyFromNode(test_node);
 
     const publicKey = getPublicKeyFromNode(test_node)
 
@@ -563,4 +563,4 @@ async function exchangeData(node, peerId, data) {
     }
 }
 
-// main()
+main()

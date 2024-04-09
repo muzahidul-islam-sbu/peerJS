@@ -1,3 +1,5 @@
+import { generateKeyPair} from '@libp2p/crypto/keys'
+import { peerIdFromKeys, peerIdFromString } from '@libp2p/peer-id'
 
 /**
  * This function returns the public key of a node
