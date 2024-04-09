@@ -95,3 +95,92 @@ export async function verifyNode(peerId, publicKey) {
         return false
     }
 }
+import { createLibp2p } from 'libp2p'
+import { tcp } from '@libp2p/tcp'
+import { yamux } from '@chainsafe/libp2p-yamux'
+import { noise } from '@chainsafe/libp2p-noise'
+import {mdns} from '@libp2p/mdns';
+import { publicEncrypt, privateDecrypt, constants } from 'crypto';
+import { Ed25519PublicKey, Ed25519PrivateKey } from '@libp2p/crypto/keys';
+
+const node1 = await createLibp2p({
+    addresses: {
+        // add a listen address (localhost) to accept TCP connections on a random port
+        listen: ['/ip4/0.0.0.0/tcp/0']
+    },
+    transports: [
+        tcp()
+    ],
+    streamMuxers: [
+        yamux()
+    ],
+    connectionEncryption: [
+        noise()
+    ],
+    peerDiscovery: [
+        mdns()
+    ]
+});
+
+const node2 = await createLibp2p({
+    addresses: {
+        // add a listen address (localhost) to accept TCP connections on a random port
+        listen: ['/ip4/0.0.0.0/tcp/0']
+    },
+    transports: [
+        tcp()
+    ],
+    streamMuxers: [
+        yamux()
+    ],
+    connectionEncryption: [
+        noise()
+    ],
+    peerDiscovery: [
+        mdns()
+    ]
+});
+
+console.log("Node 1 peerId type:", node1.peerId.type);
+console.log("Node 1 public key", node1.peerId.publicKey)
+console.log("Node 1 private key:", node1.peerId.privateKey)
+
+const message = 'This is a secret message';
+
+console.log(`Actual Public Key Length: ${node1.peerId.publicKey.slice(4).length} bytes`); // Should be 32 bytes
+console.log(`Actual Private Key Length: ${node1.peerId.privateKey.slice(4).length} bytes`); // Should be 64 bytes
+
+console.log("Private Key:", node1.peerId.privateKey.slice(4));
+
+const publicKey = new Ed25519PublicKey(node1.peerId.publicKey.slice(4));
+console.log("Actual Public Key:", publicKey);
+const privateKey = new Ed25519PrivateKey(node1.peerId.privateKey.slice(4), publicKey)
+console.log("Actual Private Key:", privateKey);
+
+const signature = privateKey.sign(message);
+const isValid = privateKey.verify(publicKey, signature);
+
+console.log("Is Valid? :", isValid);
+
+// const publicKeyBuffer = Buffer.from(node1.peerId.publicKey);
+// const privateKeyBuffer = Buffer.from(node1.peerId.privateKey);
+
+// // Convert to PEM format
+// const publicKeyPem = `-----BEGIN PUBLIC KEY-----\n${publicKeyBuffer.toString('base64').match(/.{1,64}/g).join('\n')}\n-----END PUBLIC KEY-----`;
+// const privateKeyPem = `-----BEGIN RSA PRIVATE KEY-----\n${privateKeyBuffer.toString('base64').match(/.{1,64}/g).join('\n')}\n-----END RSA PRIVATE KEY-----`;
+
+// // Example encryption using PEM-formatted public key
+// const encryptedData = publicEncrypt({
+//     key: publicKeyPem,
+//     padding: constants.RSA_PKCS1_OAEP_PADDING,
+// }, Buffer.from(message, 'utf8'));
+
+// // Example decryption using PEM-formatted private key
+// const decryptedData = privateDecrypt({
+//     key: privateKeyPem,
+//     padding: constants.RSA_PKCS1_OAEP_PADDING,
+// }, encryptedData);
+
+// console.log(decryptedData.toString('utf8'));
+
+

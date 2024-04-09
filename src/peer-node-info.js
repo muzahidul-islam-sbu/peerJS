@@ -1,3 +1,8 @@
+export const getPeerID = (node) => {
+    // console.log(node.peerId);
+    return node.peerId;
+}
+
 export const getKeyByValue = (map, value) => {
     const peerIdToRemove = value.toString();
     for (let [key, val] of map.entries()) {
