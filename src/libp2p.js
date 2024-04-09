@@ -341,6 +341,6 @@ async function stopNode(node) {
     await node.stop();
 }
 
-main()
+// main()
 
 export { test_node2, test_node }
