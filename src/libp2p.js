@@ -18,6 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 
 const __dirname = dirname(__filename);
 
+import displayMenu from './cli.js'
 import { getPublicKeyFromNode, getPrivateKeyFromNode, printKeyPair, verifyNode } from './public-private-key-pair.js'
 
 // Setting up a websocket to exchange with the gui
@@ -27,7 +28,6 @@ import { WebSocketServer } from 'ws';
 import {sendMessage, handleMessage} from './protocol.js';
 import geoip from 'geoip-lite';
 
-// import displayMenu from './cli.js'
 
 // const ip = '146.190.129.133';
 // // const location = geoip.lookup(ip);
@@ -159,77 +159,6 @@ console.log("Actively searching for peers on the local network...");
 // const testid = '12D3KooWGFvxLfn6kh2dwC9f23rAZ2QaECb87VDDez2AHqDyZgga';
 // const peertestid = peerIdFromString(testid);
 
-const ipAddresses = [];
-let local_peer_node_info = {};
-
-test_node2.addEventListener('peer:discovery', (evt) => {
-    const peerId = evt.detail.id;
-    const multiaddrs = evt.detail.multiaddrs;
-
-    ipAddresses.length = 0;
-
-    multiaddrs.forEach(ma => {
-        const multiaddrString = ma.toString();
-        const ipRegex = /\/ip4\/([^\s/]+)/;
-        const match = multiaddrString.match(ipRegex);
-        const ipAddress = match && match[1];
-
-        if(ipAddress) {
-            ipAddresses.push(ipAddress);
-        }
-    });
-
-    let peerInfo = new Object();
-
-    ipAddresses.forEach(ip => {
-        const location = geoip.lookup(ip);
-        peerInfo = createPeerInfo(location, peerId, multiaddrs[1], peerId.publicKey);
-    });
-
-    // console.log(evt.detail);
-    // Get non 127... multiaddr and convert the object into a string for parsing
-    const nonlocalMultaddr = evt.detail.multiaddrs.filter(addr => !addr.toString().startsWith('/ip4/127.0.0.')).toString();
-    // console.log(nonlocalMultaddr);
-    // Extract IP address
-    const ipAddress = nonlocalMultaddr.split('/')[2];
-    // Extract port number
-    const portNumber = nonlocalMultaddr.split('/')[4];
-    // console.log('IP address:', ipAddress);
-    // console.log('Port number:', portNumber);
-
-    local_peer_node_info = {ip_address: ipAddress, port : portNumber}
-
-    const randomWord = generateRandomWord();
-    discoveredPeers.set(randomWord, peerInfo);
-    // console.log("Discovered Peers: ", discoveredPeers);
-    console.log('\nDiscovered Peer with PeerId: ', peerId);
-    // console.log("IP addresses for this event:", ipAddresses);
-});
-
-
-test_node2.addEventListener('peer:disconnect', (evt) => {
-    const peerId = evt.detail;
-    console.log(`\nPeer with ${peerId} disconnected`)
-    const keyToRemove = getKeyByValue(discoveredPeers, peerId);
-    if (keyToRemove !== null) {
-        discoveredPeers.delete(keyToRemove);
-    } else {
-        console.log("PeerId not found in the map.");
-    }
-});
-
-function getKeyByValue(map, value) {
-    const peerIdToRemove = value.toString();
-    for (let [key, val] of map.entries()) {
-        let peerId = val.peerId;
-        let peerIdString = peerId.toString();
-        if (peerIdString === peerIdToRemove) {
-            return key;
-        }
-    }
-    return null; 
-}
-
 function createPeerInfo(location, peerId, multiaddr, publicKey) {
     const locationInfo = location !== null ? {
         city: location.city,
@@ -262,65 +191,6 @@ function findPeerInfoByPeerId(peerMap, peerId) {
     }
     return null;
 }
-displayMenu(discoveredPeers, test_node2);
-
-function generateRandomWord() {
-    const letters = 'abcdefghijklmnopqrstuvwxyz';
-    let word = '';
-    for (let i = 0; i < 5; i++) {
-        word += letters.charAt(Math.floor(Math.random() * letters.length));
-    }
-    return word;
-}
-
-async function main() {
-    // For now we'll just create one node
-    // test_node = createNode()
-
-    // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
-    const NodeMap = new Map();
-
-    getPeerID(test_node);
-    getPublicKeyFromNode(test_node);
-    getPrivateKeyFromNode(test_node);
-
-    const publicKey = getPublicKeyFromNode(test_node)
-
-    console.log("public key belongs to this node: ", await verifyNode(test_node, publicKey));
-
-    // When node information is requested, send it to the GUI
-    const nodeInfo = getPeerID(test_node);
-    // const nodePublicKey = getPublicKeyFromNode(test_node);
-
-    // printKeyPair();
-
-    // Can manage creation of nodes here
-    // For example, subscribe to events, handle incoming messages, etc.
-    // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
-
-    // Forcefully quit main
-    // process.on('SIGTERM', stop);
-    // process.on('SIGINT', stop);
-}
-
-/**
- * This function generates a peerId using a generate public/private key pair
- * @returns {void}
- */
-
-async function generatePeerId() {
-    try {
-      // Assuming publicKey and privateKey are available from previous operations
-      const {_key: privateKey, _publicKey: publicKey} = await generateKeyPair('ed25519');
-  
-      const peerId = await peerIdFromKeys(publicKey, privateKey);
-      console.log('Generated PeerId:', peerId);
-    } catch (error) {
-      console.error('Error generating PeerId:', error);
-    }
-  }
-  
-// generatePeerId();
 
 /**
  * This function returns the peerId of a node
@@ -352,55 +222,37 @@ function getMultiaddrs(node) {
 // console.log("Multiaddr of test node:", getMultiaddrs(test_node));
 // console.log("Peers that are connected:", test_node.getPeers());
 
-/**
- * This function generates a result object with specific values.
- * @param {Multiaddr} multiaddr - the multiaddr of a node
- * @returns {Object} An object with the following properties:
- * - networkProtocol: The network protocol (string).
- * - transportLayerProtocol: The transport layer protocol (string).
- * - portNumber: The port number (string).
- * - p2pPeerID: The P2P peer ID (string).
- */
+displayMenu(discoveredPeers, test_node2);
 
-function parseMultiaddr(multiaddr) {
-    const components = multiaddr.split('/');
-    const result = {
-        networkProtocol: '',
-        transportLayerProtocol: '',
-        portNumber: '',
-        p2pPeerID: ''
-    };
-  
-    // Iterate through the components to fill in the result object
-    components.forEach((component, index) => {
-        switch (component) {
-        case 'ip4':
-        case 'ip6':
-            result.networkProtocol = component;
-            break;
-        case 'tcp':
-        case 'udp':
-            result.transportLayerProtocol = component;
-            if (components[index + 1]) {
-            result.portNumber = components[index + 1];
-            }
-            break;
-        case 'p2p':
-            if (components[index + 1]) {
-            result.p2pPeerID = components[index + 1];
-            }
-            break;
-        }
-    });
-  
-    return result;
-}
-  
-// Example usage
-const multiaddrString = '/ip4/127.0.0.1/tcp/53959/p2p/12D3KooWStnQUitCcYegaMNTNyrmPaHzLfxRE79khfPsFmUYuRmC';
-const parsed = parseMultiaddr(multiaddrString);
-// console.log("Example of parsing a multiaddr:", parsed);
-  
+async function main() {
+    // For now we'll just create one node
+    // test_node = createNode()
+
+    // Store all the nodes we've created in a map of key=multiaddr and value=peerId 
+    const NodeMap = new Map();
+
+    getPeerID(test_node);
+    getPublicKeyFromNode(test_node);
+    getPrivateKeyFromNode(test_node);
+
+    const publicKey = getPublicKeyFromNode(test_node)
+
+    console.log("public key belongs to this node: ", await verifyNode(test_node, publicKey));
+
+    // When node information is requested, send it to the GUI
+    const nodeInfo = getPeerID(test_node);
+    // const nodePublicKey = getPublicKeyFromNode(test_node);
+
+    // printKeyPair();
+
+    // Can manage creation of nodes here
+    // For example, subscribe to events, handle incoming messages, etc.
+    // createNode("/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt", NodeMap)
+
+    // Forcefully quit main
+    // process.on('SIGTERM', stop);
+    // process.on('SIGINT', stop);
+} 
 
 // TODO: Add Encryption
 // const createEd25519PeerId = async () => {
@@ -565,3 +417,5 @@ async function exchangeData(node, peerId, data) {
 }
 
 main()
+
+export { test_node2, test_node }

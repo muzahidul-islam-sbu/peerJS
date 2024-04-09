@@ -29,6 +29,8 @@
     "libp2p-bootstrap": "^0.14.0",
     "libp2p-mdns": "^0.18.0",
     "multiaddr": "^10.0.1",
-    "peer-id": "^0.16.0"
+    "peer-id": "^0.16.0",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1"
   }
 }
