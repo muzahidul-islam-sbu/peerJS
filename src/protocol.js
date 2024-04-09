@@ -16,15 +16,26 @@ export async function handleMessage(stream) {
     console.log("Received message:", receivedMessage);
 }
 
-export async function sendMessage(stream, node, peerId, message) {
+export async function sendMessage(stream, node, peerId, message, addr) {
     try {
         // Convert the message to Uint8Array
         const messageUint8Array = stringToUint8Array(message);
 
         // Write the message to the stream
         await pipe([messageUint8Array], stream.sink);
-
+        // await pipe(
+        // [ Uint8Array.from(Buffer.from(message, 'utf-8')) ],
+        // stream,
+        // async function (source) {
+        //     for await (const message of source) {
+        //     console.info(`Me: ${String.fromCharCode.apply(null, message)}`);
+        //     }
+        // }
+        // );
+          
         console.log(`Sent message to ${peerId}:`, message);
+
+        // await node.hangUp(addr);
     } catch (error) {
         console.error(`Failed to send message to ${peerId}:`, error);
     }

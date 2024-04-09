@@ -6,6 +6,7 @@ import {mdns} from '@libp2p/mdns';
 
 // Function to handle incoming messages for the custom protocol
 const handleCustomProtocolMessage = (peerId, message) => {
+    console.log(message)
     console.log(`Received message from ${peerId}:`, message.toString());
 };
 
@@ -31,6 +32,11 @@ const node = await createLibp2p({
 await node.start();
 console.log('node has started:', node.peerId);
 
+node.addEventListener('peer:connect', (evt) => {
+    const peerId = evt.detail;
+    console.log('\nConnected Peer with PeerId: ', peerId);
+});
+
 // node.handle('/protocol/1.0.0', ({ stream }) => {
 //     console.log('Receiving Message')
 //     handleMesage(stream);
@@ -42,10 +48,46 @@ const CUSTOM_PROTOCOL_ID = '/protocol/1.0.0';
 
 // Register protocol handlers with libp2p node
 node.handle(CUSTOM_PROTOCOL_ID, ({ stream }) => {
-    console.log(`Received incoming connection`);
+    console.log("hello")
+
     // Handle incoming connections for the custom protocol
-    stream.on('data', (data) => {
-        handleCustomProtocolMessage(stream.remotePeer, data);
+    // stream.on('data', (data) => {
+    //     console.log(data)
+    //     // Assuming data is a buffer, you can convert it to a string if needed
+    //     const message = uint8ArrayToString(data);
+        
+    //     // Log the incoming message
+    //     console.log(`Received message: ${message}`);
+        
+    //     // Further processing of the incoming message
+    //     // handleCustomProtocolMessage(stream.remotePeer, data);
+
+    // });
+    // Use the pipe function to handle incoming data on the stream
+
+    let receivedData = Buffer.alloc(0);
+    pipe(
+        stream,
+        async function(source) {
+            for await (const buffer of source) {
+                console.log('Received buffer:', buffer); // Add this log statement
+                console.log(receivedData)
+                // Concatenate the received buffer to the existing data
+                receivedData = Buffer.concat([receivedData, buffer]);
+                console.log(receivedData)
+            }
+        }
+    ).catch((err) => {
+        console.error(`Error on stream: ${err.message}`);
+    });
+
+    // Handle stream closure
+    stream.on('close', () => {
+        console.log(`Stream with peer ${stream.remotePeer} closed`);
+    });
+    // Handle stream errors
+    stream.on('error', (err) => {
+        console.error(`Error on stream with peer ${stream.remotePeer}: ${err.message}`);
     });
 });
 
