@@ -26,11 +26,61 @@ import { WebSocketServer } from 'ws';
 import {sendMessage, handleMessage} from './protocol.js';
 import geoip from 'geoip-lite';
 
-import displayMenu from './cli.js'
+// import displayMenu from './cli.js'
 
 // const ip = '146.190.129.133';
-// const location = geoip.lookup(ip);
-// console.log(location);
+// // const location = geoip.lookup(ip);
+// // console.log(location);
+
+import tweetnacl from 'tweetnacl';
+const { box, randomBytes } = tweetnacl;
+import tweetnaclUtil from 'tweetnacl-util';
+const { encodeBase64, decodeBase64 } = tweetnaclUtil;
+
+const aliceKeyPair = box.keyPair();
+const bobKeyPair = box.keyPair();
+const camKeyPair = box.keyPair();
+
+console.log("Alice Key Pair:", aliceKeyPair);
+console.log("Bob Key Pair:", bobKeyPair);
+
+// Simulate sharing of public keys
+const alicePublicKey = aliceKeyPair.publicKey;
+const bobPublicKey = bobKeyPair.publicKey;
+
+// Message to be sent
+const encoder = new TextEncoder();
+const message = 'Hello, Bob!';
+const messageUint8Array = encoder.encode(message);
+
+// Encrypt message using Bob's public key
+const nonce = randomBytes(box.nonceLength);
+const encryptedMessage = box(
+  messageUint8Array,
+  nonce,
+  bobPublicKey,
+  aliceKeyPair.secretKey
+);
+
+console.log("Encrypted message: ", encryptedMessage);
+
+// Encode encrypted message and nonce to be sent over libp2p
+const encodedMessage = encodeBase64(encryptedMessage);
+const encodedNonce = encodeBase64(nonce);
+
+
+// Send encodedMessage and encodedNonce over libp2p stream
+
+// On the receiving side:
+// Decode received message and nonce
+const decodedMessage = decodeBase64(encodedMessage);
+const decodedNonce = decodeBase64(encodedNonce);
+
+// Decrypt message using own secret key and sender's public key
+const decoder = new TextDecoder('utf-8');
+const decryptedMessage = decoder.decode(box.open(decodedMessage, decodedNonce, alicePublicKey, bobKeyPair.secretKey));
+
+console.log('Decrypted message:', decryptedMessage);
 
 // libp2p node logic
 const test_node = await createLibp2p({
@@ -132,7 +182,7 @@ test_node2.addEventListener('peer:discovery', (evt) => {
 
     ipAddresses.forEach(ip => {
         const location = geoip.lookup(ip);
-        peerInfo = createPeerInfo(location, peerId, multiaddrs[1]);
+        peerInfo = createPeerInfo(location, peerId, multiaddrs[1], peerId.publicKey);
     });
 
     // console.log(evt.detail);
@@ -179,7 +229,7 @@ function getKeyByValue(map, value) {
     return null; 
 }
 
-function createPeerInfo(location, peerId, multiaddr) {
+function createPeerInfo(location, peerId, multiaddr, publicKey) {
     const locationInfo = location !== null ? {
         city: location.city,
         state: location.region,
@@ -191,6 +241,7 @@ function createPeerInfo(location, peerId, multiaddr) {
     const peerInfo = {
         peerId: peerId,
         multiaddr: multiaddr,
+        publicKey: publicKey,
         location: locationInfo
     };
 

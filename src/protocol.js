@@ -16,7 +16,7 @@ export async function handleMessage(stream) {
     console.log("Received message:", receivedMessage);
 }
 
-export async function sendMessage(stream, node, peerId, message, addr) {
+export async function sendMessage(stream, node, peerId, message, publicKey, addr) {
     try {
         // Convert the message to Uint8Array
         const messageUint8Array = stringToUint8Array(message);
