@@ -1,4 +1,4 @@
-function generateRandomWord() {
+export function generateRandomWord() {
     const letters = 'abcdefghijklmnopqrstuvwxyz';
     let word = '';
     for (let i = 0; i < 5; i++) {

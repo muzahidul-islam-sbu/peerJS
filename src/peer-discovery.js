@@ -1,63 +1,5 @@
-import { test_node2 } from "./libp2p";
-
-const ipAddresses = [];
-let local_peer_node_info = {};
-
-test_node2.addEventListener('peer:discovery', (evt) => {
-    const peerId = evt.detail.id;
-    const multiaddrs = evt.detail.multiaddrs;
-
-    ipAddresses.length = 0;
-
-    multiaddrs.forEach(ma => {
-        const multiaddrString = ma.toString();
-        const ipRegex = /\/ip4\/([^\s/]+)/;
-        const match = multiaddrString.match(ipRegex);
-        const ipAddress = match && match[1];
-
-        if(ipAddress) {
-            ipAddresses.push(ipAddress);
-        }
-    });
-
-    let peerInfo = new Object();
-
-    ipAddresses.forEach(ip => {
-        const location = geoip.lookup(ip);
-        peerInfo = createPeerInfo(location, peerId, multiaddrs[1], peerId.publicKey);
-    });
-
-    // console.log(evt.detail);
-    // Get non 127... multiaddr and convert the object into a string for parsing
-    const nonlocalMultaddr = evt.detail.multiaddrs.filter(addr => !addr.toString().startsWith('/ip4/127.0.0.')).toString();
-    // console.log(nonlocalMultaddr);
-    // Extract IP address
-    const ipAddress = nonlocalMultaddr.split('/')[2];
-    // Extract port number
-    const portNumber = nonlocalMultaddr.split('/')[4];
-    // console.log('IP address:', ipAddress);
-    // console.log('Port number:', portNumber);
-
-    local_peer_node_info = {ip_address: ipAddress, port : portNumber}
-
-    const randomWord = generateRandomWord();
-    discoveredPeers.set(randomWord, peerInfo);
-    // console.log("Discovered Peers: ", discoveredPeers);
-    console.log('\nDiscovered Peer with PeerId: ', peerId);
-    // console.log("IP addresses for this event:", ipAddresses);
-});
-
-
-test_node2.addEventListener('peer:disconnect', (evt) => {
-    const peerId = evt.detail;
-    console.log(`\nPeer with ${peerId} disconnected`)
-    const keyToRemove = getKeyByValue(discoveredPeers, peerId);
-    if (keyToRemove !== null) {
-        discoveredPeers.delete(keyToRemove);
-    } else {
-        console.log("PeerId not found in the map.");
-    }
-});
+import { test_node2, test_node } from "./libp2p.js";
+import { multiaddr } from '@multiformats/multiaddr'
 
 function getKeyByValue(map, value) {
     const peerIdToRemove = value.toString();
@@ -73,4 +15,42 @@ function getKeyByValue(map, value) {
 
 export const listConnectedPeers = (node) => {
     console.log(node.getPeers());
+}
+
+function findPeerInfoByPeerId(peerMap, peerId) {
+    for (const [randomWord, info] of peerMap.entries()) {
+        console.log(info.peerId)
+        console.log(peerId)
+        if (info.peerId === peerId) {
+            console.log("ceck this: ")
+            console.log(info)
+            console.log(randomWord)
+            return info;
+        }
+    }
+    return null;
+}
+
+// Connecting a node to all the bootstrap peers in its network
+// may want to add another parameter "neighbors" to restrict what nodes it can access
+async function discoverPeers(node) {
+    // Implement peer discovery mechanisms here
+    // For example, using bootstrap nodes or mDNS
+    try {
+        // Use dig to find other examples of bootstrap node addresses
+        // we can assume we have these already, hence they're hardcoded
+        const bootstrapNodes = [
+            '/dns4/bootstrap.libp2p.io/tcp/443/wss/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN',
+            '/dns4/bootstrap.libp2p.io/tcp/443/wss/p2p/QmZvFnUfyFxkfzfjN7c1j6E1YKgKvZgoCyzp4TD5Yk3BdU'
+        ];
+
+        // Connect to each bootstrap node to discover more peers
+        for (const addr of bootstrapNodes) {
+            const ma = multiaddr(addr);
+            await node.dial(ma);
+        }
+
+    } catch (error) {
+        console.error('Peer discovery failed:', error);
+    }
 }

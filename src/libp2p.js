@@ -20,6 +20,8 @@ const __dirname = dirname(__filename);
 
 import displayMenu from './cli.js'
 import { getPublicKeyFromNode, getPrivateKeyFromNode, printKeyPair, verifyNode } from './public-private-key-pair.js'
+import { createPeerInfo } from './peer-node-info.js'
+import { generateRandomWord } from './utils.js'
 
 // Setting up a websocket to exchange with the gui
 import { WebSocket } from 'ws';
@@ -32,56 +34,6 @@ import geoip from 'geoip-lite';
 // const ip = '146.190.129.133';
 // // const location = geoip.lookup(ip);
 // // console.log(location);
-
-import tweetnacl from 'tweetnacl';
-const { box, randomBytes } = tweetnacl;
-import tweetnaclUtil from 'tweetnacl-util';
-const { encodeBase64, decodeBase64 } = tweetnaclUtil;
-
-const aliceKeyPair = box.keyPair();
-const bobKeyPair = box.keyPair();
-const camKeyPair = box.keyPair();
-
-console.log("Alice Key Pair:", aliceKeyPair);
-console.log("Bob Key Pair:", bobKeyPair);
-
-// Simulate sharing of public keys
-const alicePublicKey = aliceKeyPair.publicKey;
-const bobPublicKey = bobKeyPair.publicKey;
-
-// Message to be sent
-const encoder = new TextEncoder();
-const message = 'Hello, Bob!';
-const messageUint8Array = encoder.encode(message);
-
-// Encrypt message using Bob's public key
-const nonce = randomBytes(box.nonceLength);
-const encryptedMessage = box(
-  messageUint8Array,
-  nonce,
-  bobPublicKey,
-  aliceKeyPair.secretKey
-);
-
-console.log("Encrypted message: ", encryptedMessage);
-
-// Encode encrypted message and nonce to be sent over libp2p
-const encodedMessage = encodeBase64(encryptedMessage);
-const encodedNonce = encodeBase64(nonce);
-
-
-// Send encodedMessage and encodedNonce over libp2p stream
-
-// On the receiving side:
-// Decode received message and nonce
-const decodedMessage = decodeBase64(encodedMessage);
-const decodedNonce = decodeBase64(encodedNonce);
-
-// Decrypt message using own secret key and sender's public key
-const decoder = new TextDecoder('utf-8');
-const decryptedMessage = decoder.decode(box.open(decodedMessage, decodedNonce, alicePublicKey, bobKeyPair.secretKey));
-
-console.log('Decrypted message:', decryptedMessage);
 
 // libp2p node logic
 const test_node = await createLibp2p({
@@ -117,10 +69,6 @@ const test_node = await createLibp2p({
     }
 });
 
-// const tonyMultiaddr = multiaddr('/ip4/172.25.87.26/tcp/63820/p2p/12D3KooWGNmUsoaUNuHENbbk4Yg7euUwbCi4H9RNgtPoYkkAWJFH');
-// const tonyMultiaddr = multiaddr('/ip4/172.25.87.26/tcp/63820/p2p/12D3KooWGNmUsoaUNuHENbbk4Yg7euUwbCi4H9RNgtPoYkkAWJFH');
-const discoveredPeers = new Map();
-
 const test_node2 = await createLibp2p({
     addresses: {
         // add a listen address (localhost) to accept TCP connections on a random port
@@ -145,6 +93,68 @@ console.log('Test Node 2 has started:', test_node2.peerId);
 console.log("Actively searching for peers on the local network...");
 // console.log("Multiaddr of Test Node 2:", getMultiaddrs(test_node2));
 
+const discoveredPeers = new Map()
+const ipAddresses = [];
+let local_peer_node_info = {};
+
+test_node2.addEventListener('peer:discovery', (evt) => {
+    const peerId = evt.detail.id;
+    console.log(`Peer ${peerId} has disconnected`)
+    const multiaddrs = evt.detail.multiaddrs;
+
+    ipAddresses.length = 0;
+
+    multiaddrs.forEach(ma => {
+        const multiaddrString = ma.toString();
+        const ipRegex = /\/ip4\/([^\s/]+)/;
+        const match = multiaddrString.match(ipRegex);
+        const ipAddress = match && match[1];
+
+        if(ipAddress) {
+            ipAddresses.push(ipAddress);
+        }
+    });
+
+    let peerInfo = new Object();
+
+    ipAddresses.forEach(ip => {
+        const location = geoip.lookup(ip);
+        peerInfo = createPeerInfo(location, peerId, multiaddrs[1], peerId.publicKey);
+    });
+
+    // console.log(evt.detail);
+    // Get non 127... multiaddr and convert the object into a string for parsing
+    const nonlocalMultaddr = evt.detail.multiaddrs.filter(addr => !addr.toString().startsWith('/ip4/127.0.0.')).toString();
+    // console.log(nonlocalMultaddr);
+    // Extract IP address
+    const ipAddress = nonlocalMultaddr.split('/')[2];
+    // Extract port number
+    const portNumber = nonlocalMultaddr.split('/')[4];
+    // console.log('IP address:', ipAddress);
+    // console.log('Port number:', portNumber);
+
+    local_peer_node_info = {ip_address: ipAddress, port : portNumber}
+
+    const randomWord = generateRandomWord();
+    discoveredPeers.set(randomWord, peerInfo);
+    // console.log("Discovered Peers: ", discoveredPeers);
+    console.log('\nDiscovered Peer with PeerId: ', peerId);
+    // console.log("IP addresses for this event:", ipAddresses);
+});
+
+
+test_node2.addEventListener('peer:disconnect', (evt) => {
+    const peerId = evt.detail;
+    console.log(`Peer ${peerId} has disconnected`)
+    console.log(`\nPeer with ${peerId} disconnected`)
+    const keyToRemove = getKeyByValue(discoveredPeers, peerId);
+    if (keyToRemove !== null) {
+        discoveredPeers.delete(keyToRemove);
+    } else {
+        console.log("PeerId not found in the map.");
+    }
+});
+
 // const selectedPeerAddr = multiaddr('/ip4/146.190.129.133/tcp/36077/p2p/12D3KooWEfxnYQskJ6wjVts6pNdyFbw4uPcV6LtfEMdWpbEKkxYk')
 // try {
 //     console.log(`\nConnecting to ${selectedPeerAddr}...`);
@@ -154,43 +164,6 @@ console.log("Actively searching for peers on the local network...");
 //     console.log(error)
 //     console.error(`Failed to connect to ${selectedPeerAddr}`);
 // }
-
-
-// const testid = '12D3KooWGFvxLfn6kh2dwC9f23rAZ2QaECb87VDDez2AHqDyZgga';
-// const peertestid = peerIdFromString(testid);
-
-function createPeerInfo(location, peerId, multiaddr, publicKey) {
-    const locationInfo = location !== null ? {
-        city: location.city,
-        state: location.region,
-        country: location.country,
-        latitude: location.ll[0],
-        longitude: location.ll[1]
-    } : null;
-
-    const peerInfo = {
-        peerId: peerId,
-        multiaddr: multiaddr,
-        publicKey: publicKey,
-        location: locationInfo
-    };
-
-    return peerInfo;
-}
-
-function findPeerInfoByPeerId(peerMap, peerId) {
-    for (const [randomWord, info] of peerMap.entries()) {
-        console.log(info.peerId)
-        console.log(peerId)
-        if (info.peerId === peerId) {
-            console.log("ceck this: ")
-            console.log(info)
-            console.log(randomWord)
-            return info;
-        }
-    }
-    return null;
-}
 
 /**
  * This function returns the peerId of a node
@@ -366,54 +339,6 @@ async function stopNode(node) {
     // const peerID = node.peerId.toB58String();
     // console.log("Stopping node: ", peerID)
     await node.stop();
-}
-
-// Connecting a node to all the peers in its network
-// may want to add another parameter "neighbors" to restrict what nodes it can access
-async function discoverPeers(node) {
-    // Implement peer discovery mechanisms here
-    // For example, using bootstrap nodes or mDNS
-    try {
-        // Use dig to find other examples of bootstrap node addresses
-        // we can assume we have these already, hence they're hardcoded
-        const bootstrapNodes = [
-            '/dns4/bootstrap.libp2p.io/tcp/443/wss/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN',
-            '/dns4/bootstrap.libp2p.io/tcp/443/wss/p2p/QmZvFnUfyFxkfzfjN7c1j6E1YKgKvZgoCyzp4TD5Yk3BdU'
-        ];
-
-        // Connect to each bootstrap node to discover more peers
-        for (const addr of bootstrapNodes) {
-            const ma = multiaddr(addr);
-            await node.dial(ma);
-        }
-
-    } catch (error) {
-        console.error('Peer discovery failed:', error);
-    }
-}
-
-async function routeMessage(node, message, targetPeerId) {
-    // Route the message to the specified target peer
-}
-
-// need to read more into pub sub testing protocols
-async function exchangeData(node, peerId, data) {
-    // Implement data exchange protocol here
-    // Send and receive data with the specified peer
-    try {
-        // Publish data to a topic
-        await node.pubsub.publish(topic, data);
-        console.log('Data published:', data);
-
-        // Subscribing means this node will receive notifs
-        await node.pubsub.subscribe(topic, (message) => {
-            console.log('Received data:', message.data.toString());
-        });
-        console.log('Subscribed to topic:', topic);
-
-    } catch (error) {
-        console.error('Data exchange failed:', error);
-    }
 }
 
 main()
