@@ -15,6 +15,7 @@ import protoLoader from '@grpc/proto-loader';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
+
 const __dirname = dirname(__filename);
 
 import { getPublicKeyFromNode, getPrivateKeyFromNode, printKeyPair, verifyNode } from './public-private-key-pair.js'
@@ -326,7 +327,7 @@ async function generatePeerId() {
  * @param {Libp2p} node - the libp2p node
  * @returns {Ed25519PeerId} the peerId associated with the libp2p node
  */
-function getPeerID(node) {
+export function getPeerID(node) {
     // console.log(node.peerId);
     return node.peerId;
 }

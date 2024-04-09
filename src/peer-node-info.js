@@ -39,37 +39,6 @@ export const generateRandomWord = () => {
     return word;
 }
 
-export const getPublicKeyFromNode = (node) => {
-    const peerId = getPeerID(node);
-    try {
-      if(peerId.publicKey) {
-        const publicKey = peerId.publicKey;
-        // console.log("Public Key:", publicKey.toString('base64'));
-        return publicKey;
-      } else {
-        console.log("Public key is not embedded in this Peer ID.");
-      }
-
-    } catch(error) {
-      console.error("Error retrieving public key:", error);
-    }
-}
-
-export const getPrivateKeyFromNode = (node) => {
-    const peerId = getPeerID(node);
-    try {
-        if(peerId.privateKey) {
-            const privateKey = peerId.privateKey;
-            // console.log("Private Key:", privateKey.toString('base64'));
-            return privateKey;
-        } else {
-            console.log("Private key is not embedded in this Peer ID.");
-        }
-    } catch(error) {
-        console.error("Error retrieving private key:", error);
-    }
-}
-
 export const getMultiaddrs = (node) => {
     const multiaddrs = node.getMultiaddrs();
     return multiaddrs;

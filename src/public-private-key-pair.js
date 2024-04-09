@@ -1,5 +1,10 @@
 import { generateKeyPair} from '@libp2p/crypto/keys'
 import { peerIdFromKeys, peerIdFromString } from '@libp2p/peer-id'
+import { getPeerID } from './libp2p';
+import tweetnacl from 'tweetnacl';
+import tweetnacl from 'tweetnacl';
+const { box, randomBytes } = tweetnacl;
+import tweetnaclUtil from 'tweetnacl-util';
 
 /**
  * This function returns the public key of a node
