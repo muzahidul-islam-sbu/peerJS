@@ -19,7 +19,6 @@ const __dirname = dirname(__filename);
 
 import { generateKeyPair} from '@libp2p/crypto/keys'
 import { peerIdFromKeys, peerIdFromString } from '@libp2p/peer-id'
-import readline from 'readline';
 
 // Setting up a websocket to exchange with the gui
 import { WebSocket } from 'ws';
@@ -28,9 +27,11 @@ import { WebSocketServer } from 'ws';
 import {sendMessage, handleMessage} from './protocol.js';
 import geoip from 'geoip-lite';
 
+// import displayMenu from './cli.js'
+
 // const ip = '146.190.129.133';
-// const location = geoip.lookup(ip);
-// console.log(location);
+// // const location = geoip.lookup(ip);
+// // console.log(location);
 
 import tweetnacl from 'tweetnacl';
 const { box, randomBytes } = tweetnacl;
@@ -248,192 +249,20 @@ function createPeerInfo(location, peerId, multiaddr, publicKey) {
     return peerInfo;
 }
 
-// displayMenu(discoveredPeers, test_node2);
-
-/**
- * TODO:
- * -transfer files
- * -conduct a wallet transfer
- */
-function displayMenu(discoveredPeers, node) {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-    
-    function displayOptions() {
-        console.log("\nMenu Options:");
-        console.log("1. List discovered peers");
-        console.log("2. List known information on a peer");
-        console.log("3. List connected peers");
-        console.log("4. Retrieve a peers public key");
-        console.log("5. Connect to GUI");
-        console.log("6. Make a market transaction???");
-        console.log("7. Connect to a public peer");
-        console.log("8. Send Message")
-        console.log("9. Exit");
-
-        rl.question("\nEnter your choice: ", async (choice) => {
-            switch (choice) {
-                case '1':
-                    console.log("Peers that are discovered:", discoveredPeers);
-                    displayOptions();
-                    break;
-                case '2':
-                    console.log("Peers available:");
-                    discoveredPeers.forEach((peerInfo, randomWord) => {
-                        console.log(`${randomWord}, ${peerInfo.peerId}`);
-                    });
-                    rl.question("\nEnter the 5-letter word of the peer you want to find information on: ", async (word) => {
-                        const selectedPeerInfo = discoveredPeers.get(word);
-                        const selectedPeerId = selectedPeerInfo.peerId;
-                        if (selectedPeerId) {
-                            try {
-                                const peer = await node.peerStore.get(selectedPeerId)
-                                console.log("Known information about this peer: ", peer)
-                            } catch (error) {
-                                console.error(`Failed to connect to ${selectedPeerId}`);
-                            }
-                        } else {
-                            console.log("Invalid peer. Please try again");
-                        }
-                        displayOptions();
-                    });
-                    break;
-                case '3':
-                    console.log("Peers you are currently connected to:");
-                    console.log(node.getPeers());
-                    displayOptions();
-                    break;
-                case '4':
-                    console.log("Peers available:");
-                    discoveredPeers.forEach((peerInfo, randomWord) => {
-                        console.log(`${randomWord}, ${peerInfo.peerId}`);
-                    });
-                    rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
-                        const selectedPeerInfo = discoveredPeers.get(word);
-                        const selectedPeerId = selectedPeerInfo.peerId;
-                        if (selectedPeerId) {
-                            try {
-                                const publicKey = await node.getPublicKey(selectedPeerId);
-                                console.log("Public Key of Peer: ", publicKey);
-                            } catch (error) {
-                                console.error(`Failed to retrieve information of public key on  ${selectedPeerId}`);
-                            }
-                        } else {
-                            console.log("Invalid peer. Please try again");
-                        }
-                        displayOptions();
-                    });
-                    break;
-                case '5':
-                    const ws = new WebSocketServer({ port: 5174 }) // Server
-                    // const ws = new WebSocket('ws://localhost:5174'); // Client
-
-                    console.log("Now opening up websocket connection to GUI...")
-                    // When a client connects to the WebSocket server
-                    ws.on('connection', (ws) => {
-                        console.log('Client connected');
-                
-                        // Handle requests from the GUI 
-                        ws.on('message', (message) => {
-                            console.log('Request: ', message.toString());
-                            if (message.toString() === 'GET_DATA') {
-                                console.log("received GET request")
-                                // If the message is 'GET_DATA', send the peer node information to the client
-                                const peerNodeInfo = {
-                                  // Example peer node information
-                                  id: node.peerID,
-                                  address: local_peer_node_info.ip_address,
-                                  port: local_peer_node_info.port,
-                                  // Add other relevant information as needed
-                                };
-                          
-                                // Convert the peer node information to JSON and send it back to the client
-                                ws.send(JSON.stringify(peerNodeInfo));
-                                // Send response with header type NODE_INFO
-                                // ws.send(JSON.stringify({ type: 'NODE_INFO', data: nodeInfo }));
-                              }
-                    
-                            // if (parsedData.type === 'NODE_INFO') {
-                        });
-                        // Send a welcome message to the client
-                        ws.send('Welcome to the WebSocket server!');
-                    });
-                    ws.on('error', (error) => {
-                        console.error('WebSocket error:', error);
-                    });
-                    displayOptions();
-                    break;
-                case '6':
-                    console.log("Make a market transaction");
-                    break;
-                case '7':
-                    console.log("Connect to a public peer node:");
-                    rl.question("\nEnter IP Address of public node you're connecting to: ", async (ipAddress) => {
-                        rl.question("\nEnter Port number the node you're connecting to is listening on: ", async (portNumber) => {
-                            rl.question("\nEnter the Peer ID: ", async (peerID) => {
-                                let userInputMultiAddr = multiaddr(`/ip4/${ipAddress}/tcp/${portNumber}/p2p/${peerID}`);
-                                console.log("Your multiaddress string is: ", userInputMultiAddr);
-                                try {
-                                    console.log(`\nConnecting to ${userInputMultiAddr}...`);
-                                    await node.dial(userInputMultiAddr);
-                                    console.log(`Connected to ${userInputMultiAddr}`);
-                                    let peerInfo = new Object();
-                                    const location = geoip.lookup(ipAddress);
-                                    peerInfo = createPeerInfo(location, peerID);
-                                    const randomWord = generateRandomWord();
-                                    discoveredPeers.set(randomWord, peerInfo);
-                                } catch (error) {
-                                    console.error(`Failed to connect to ${userInputMultiAddr}`);
-                                    console.log(error)
-                                    console.error(`Please confirm you answered all of the questions correctly and that firewall rules have been adjusted for port ${portNumber}`);
-                                }
-                                displayOptions();
-                            });
-                        });
-                    });
-                    break;
-                case '8':
-                    console.log("Peers available:");
-                    discoveredPeers.forEach((peerInfo, randomWord) => {
-                        console.log(`${randomWord}, ${peerInfo.peerId}`);
-                    });
-                    rl.question("\nEnter the 5-letter word of the peer you want: ", async (word) => {
-                        const selectedPeerInfo = discoveredPeers.get(word);
-                        const selectedPeerId = selectedPeerInfo.peerId;
-                        const selectedPeerMA = selectedPeerInfo.multiaddr;
-                        const selectedPeerPublicKey = selectedPeerInfo.publicKey;
-                        if (selectedPeerId) {
-                            try {
-                                rl.question("\nEnter Message to be sent: ", async(message) => {
-                                    const stream = await node.dialProtocol(selectedPeerMA, '/protocol/1.0.0');
-                                    console.log('test_node2 dials to receiver: on protocol /protocol/1.0.0')
-                                    sendMessage(stream, node, selectedPeerId, message, publicKey);
-                                });
-                            } catch (error) {
-                                console.error(`Failed to set up communication channel  ${selectedPeerId}`);
-                            }
-                        } else {
-                            console.log("Invalid peer. Please try again");
-                        }
-                        displayOptions();
-                    });
-                    break;
-                case '9':
-                    await node.stop();
-                    console.log("Node has stopped");
-                    console.log("Exiting...");
-                    rl.close();
-                    process.exit();
-                default:
-                    displayOptions();
-            }
-        });
+function findPeerInfoByPeerId(peerMap, peerId) {
+    for (const [randomWord, info] of peerMap.entries()) {
+        console.log(info.peerId)
+        console.log(peerId)
+        if (info.peerId === peerId) {
+            console.log("ceck this: ")
+            console.log(info)
+            console.log(randomWord)
+            return info;
+        }
     }
-
-    displayOptions();
+    return null;
 }
+displayMenu(discoveredPeers, test_node2);
 
 function generateRandomWord() {
     const letters = 'abcdefghijklmnopqrstuvwxyz';
@@ -474,32 +303,6 @@ async function main() {
 }
 
 /**
- * This function creates a public/private key pair and prints the keys as well as their representation in string and hex format
- * @returns {void}
- */
-async function printKeyPair() {
-    try {
-        const keyPair = await generateKeyPair('ed25519');
-        const {_key: privateKey, _publicKey: publicKey} = keyPair
-        const privateKeyString = privateKey.toString('base64'); 
-        const publicKeyString = publicKey.toString('base64');   
-        const publicKeyHex = publicKey.toString('hex');
-        const privateKeyHex = privateKey.toString('hex');
-
-
-        console.log('Public Key:', publicKey);
-        console.log('Private Key:', privateKey);
-        console.log("Public Key String Format:", publicKeyString);
-        console.log("Private Key String Format:", privateKeyString);
-        console.log("Public Key Hex Format:", privateKeyHex);
-        console.log("Private Key Hex Format:", privateKeyHex);
-
-    } catch (error) {
-        console.error('Error generating key pair:', error);
-    }
-}
-
-/**
  * This function generates a peerId using a generate public/private key pair
  * @returns {void}
  */
@@ -533,77 +336,6 @@ function getPeerID(node) {
 
 // console.log("Peer Routing Information:", await test_node.peerRouting.findPeer(getPeerID(test_node)));
 // should pass in peerId of another node
-
-/**
- * This function returns the public key of a node
- * @param {Libp2p} node 
- * @returns {Uint8Array} - the public key represented as an array of 8-bit unsigned integers
- */
-
-function getPublicKeyFromNode(node) {
-    const peerId = getPeerID(node);
-    try {
-      if(peerId.publicKey) {
-        const publicKey = peerId.publicKey;
-        // console.log("Public Key:", publicKey.toString('base64'));
-        return publicKey;
-      } else {
-        console.log("Public key is not embedded in this Peer ID.");
-      }
-
-    } catch(error) {
-      console.error("Error retrieving public key:", error);
-    }
-}
-
-// console.log("Public Key from test node:", getPublicKeyFromNode(test_node));
-
-/**
- * This function returns the public key of a node
- * @param {Libp2p} node 
- * @returns {Uint8Array} the private key represented as an array of 8-bit unsigned integers
- */
-
-function getPrivateKeyFromNode(node) {
-    const peerId = getPeerID(node);
-    try {
-        if(peerId.privateKey) {
-            const privateKey = peerId.privateKey;
-            // console.log("Private Key:", privateKey.toString('base64'));
-            return privateKey;
-        } else {
-            console.log("Private key is not embedded in this Peer ID.");
-        }
-    } catch(error) {
-        console.error("Error retrieving private key:", error);
-    }
-}
-
-/**
- * This function verifies whether the public key belongs to a node
- * @param {Libp2p} node 
- * @param {Uint8Array} publicKey - the public key associated with the libp2p node
- * @returns {boolean} True if the key belongs to the node, otherwise false
- */
-
-async function verifyNode(peerId, publicKey) {
-    const peerIdKey = await peerIdFromKeys(publicKey)
-
-    console.log("Peer ID: ", peerId);
-    console.log("Peer ID from Key:", peerIdKey);
-    
-    const peerIdString = peerId.toString();
-    const peerIdKeyString = peerIdKey.toString();
-
-    console.log("Peer ID String from node:", peerIdString);
-    console.log("Peer ID String from Key:", peerIdKeyString);
-    // Compare the string representations
-    if (peerIdString === peerIdKeyString) {
-        return true
-    } else {
-        return false
-    }
-}
 
 /**
  * This function returns the multiaddress of a given node
