@@ -146,6 +146,5 @@ export default function displayMenu(discoveredPeers, node) {
             }
         });
     }
-
     displayOptions();
 }

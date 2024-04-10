@@ -30,131 +30,6 @@ import { WebSocketServer } from 'ws';
 import {sendMessage, handleMessage} from './protocol.js';
 import geoip from 'geoip-lite';
 
-
-// const ip = '146.190.129.133';
-// // const location = geoip.lookup(ip);
-// // console.log(location);
-
-// libp2p node logic
-const test_node = await createLibp2p({
-    // peerId: customPeerId,
-    addresses: {
-        // add a listen address (localhost) to accept TCP connections on a random port
-        listen: ['/ip4/0.0.0.0/tcp/0']
-    },
-    transports: [
-        tcp()
-    ],
-    streamMuxers: [
-        yamux()
-    ],
-    connectionEncryption: [
-        noise()
-    ],
-    peerDiscovery: [
-        bootstrap({
-            list: [
-                // bootstrap node here is generated from dig command
-                '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt'
-            ]
-        })
-    ],
-    services: {
-        dht: kadDHT({
-            kBucketSize: 20,
-        }),
-        ping: ping({
-            protocolPrefix: 'ipfs',
-        }),
-    }
-});
-
-const test_node2 = await createLibp2p({
-    addresses: {
-        // add a listen address (localhost) to accept TCP connections on a random port
-        listen: ['/ip4/0.0.0.0/tcp/0']
-    },
-    transports: [
-        tcp()
-    ],
-    streamMuxers: [
-        yamux()
-    ],
-    connectionEncryption: [
-        noise()
-    ],
-    peerDiscovery: [
-        mdns()
-    ]
-});
-
-await test_node2.start();
-console.log('Test Node 2 has started:', test_node2.peerId);
-console.log("Actively searching for peers on the local network...");
-// console.log("Multiaddr of Test Node 2:", getMultiaddrs(test_node2));
-
-const discoveredPeers = new Map()
-const ipAddresses = [];
-let local_peer_node_info = {};
-
-test_node2.addEventListener('peer:discovery', (evt) => {
-    const peerId = evt.detail.id;
-    console.log(`Peer ${peerId} has disconnected`)
-    const multiaddrs = evt.detail.multiaddrs;
-
-    ipAddresses.length = 0;
-
-    multiaddrs.forEach(ma => {
-        const multiaddrString = ma.toString();
-        const ipRegex = /\/ip4\/([^\s/]+)/;
-        const match = multiaddrString.match(ipRegex);
-        const ipAddress = match && match[1];
-
-        if(ipAddress) {
-            ipAddresses.push(ipAddress);
-        }
-    });
-
-    let peerInfo = new Object();
-
-    ipAddresses.forEach(ip => {
-        const location = geoip.lookup(ip);
-        peerInfo = createPeerInfo(location, peerId, multiaddrs[1], peerId.publicKey);
-    });
-
-    // console.log(evt.detail);
-    // Get non 127... multiaddr and convert the object into a string for parsing
-    const nonlocalMultaddr = evt.detail.multiaddrs.filter(addr => !addr.toString().startsWith('/ip4/127.0.0.')).toString();
-    // console.log(nonlocalMultaddr);
-    // Extract IP address
-    const ipAddress = nonlocalMultaddr.split('/')[2];
-    // Extract port number
-    const portNumber = nonlocalMultaddr.split('/')[4];
-    // console.log('IP address:', ipAddress);
-    // console.log('Port number:', portNumber);
-
-    local_peer_node_info = {ip_address: ipAddress, port : portNumber}
-
-    const randomWord = generateRandomWord();
-    discoveredPeers.set(randomWord, peerInfo);
-    // console.log("Discovered Peers: ", discoveredPeers);
-    console.log('\nDiscovered Peer with PeerId: ', peerId);
-    // console.log("IP addresses for this event:", ipAddresses);
-});
-
-
-test_node2.addEventListener('peer:disconnect', (evt) => {
-    const peerId = evt.detail;
-    console.log(`Peer ${peerId} has disconnected`)
-    console.log(`\nPeer with ${peerId} disconnected`)
-    const keyToRemove = getKeyByValue(discoveredPeers, peerId);
-    if (keyToRemove !== null) {
-        discoveredPeers.delete(keyToRemove);
-    } else {
-        console.log("PeerId not found in the map.");
-    }
-});
-
 // const selectedPeerAddr = multiaddr('/ip4/146.190.129.133/tcp/36077/p2p/12D3KooWEfxnYQskJ6wjVts6pNdyFbw4uPcV6LtfEMdWpbEKkxYk')
 // try {
 //     console.log(`\nConnecting to ${selectedPeerAddr}...`);
@@ -194,8 +69,6 @@ function getMultiaddrs(node) {
 
 // console.log("Multiaddr of test node:", getMultiaddrs(test_node));
 // console.log("Peers that are connected:", test_node.getPeers());
-
-displayMenu(discoveredPeers, test_node2);
 
 async function main() {
     // For now we'll just create one node
@@ -340,7 +213,3 @@ async function stopNode(node) {
     // console.log("Stopping node: ", peerID)
     await node.stop();
 }
-
-// main()
-
-export { test_node2, test_node }
