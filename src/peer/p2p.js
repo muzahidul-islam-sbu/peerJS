@@ -22,6 +22,11 @@ import crypto from 'crypto';
 import { readFileSync, readdir } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import * as fs from 'node:fs';
+import {EventEmitter} from 'node:events';
+
+class Emitter extends EventEmitter {}
+const emitter = new Emitter();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const port = 50936;
@@ -49,7 +54,7 @@ const bootstrapMultiaddrs = [
 
 async function createNode (id) {
     return createLibp2p({
-        peerId: id,
+        // peerId: id,
         transports: [tcp()],
         connectionEncryption: [noise()],
         streamMuxers: [yamux()],
@@ -65,7 +70,7 @@ async function createNode (id) {
         ],   
         addresses: {
             // add a listen address (localhost) to accept TCP connections on a random port
-            listen: ['/ip4/0.0.0.0/tcp/50936']
+            listen: ['/ip4/0.0.0.0/tcp/0']
         },
     })
 }
@@ -91,15 +96,17 @@ async function run() {
     console.log('Node has started: ', node.peerId)
 
     console.log('libp2p is listening on the following address: ')
-    // node.getMultiaddrs().forEach((addr) => {
-    //     console.log(addr.toString())
-    // })
+    node.getMultiaddrs().forEach((addr) => {
+        console.log(addr.toString())
+    })
     let addr = node.getMultiaddrs()[0].toString();
     let parts = addr.split('/');
     parts[2] = publicIP;
     const publicMultiaddr = parts.join('/');
     console.log(publicMultiaddr);
 
+    let recievedPayment = {};
+    let bufferedFiles = {}
     process.stdin.on('data', async (input) => {
         const inputString = input.toString().trim();
         const type = inputString.split(' ')[0];
@@ -107,7 +114,7 @@ async function run() {
         if (type == 'request') {
             const [_, prodIp, prodPort, prodId, fileHash] = inputString.split(' '); // Split input by space
             const curAddr = publicMultiaddr;
-            
+
             // Dial to the producer peer 
             const addr = '/ip4/' + prodIp + '/tcp/' + prodPort + '/p2p/' + prodId; 
             const producerMA = multiaddr(addr)
@@ -125,26 +132,53 @@ async function run() {
                 console.log('Requested file');
             } catch (err) {console.log(err)}
         } else if (type == 'send') {
-            let [_, addr, fileHash] = inputString.split(' '); // Split input by space
-            let actualPath = ''
-            readdir('testProducerFiles/', (err, files) => {
-                for (const file of files) {
-                    const filePath = join(__dirname, 'testProducerFiles/', file);
-                    const fileContent = readFileSync(filePath);
-                    const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
+            let [_, addr, fileHash, price] = inputString.split(' '); // Split input by space
+            let actualPath = join(__dirname, 'testProducerFiles/', fileHash);
+            price = parseInt(price);
+            // readdir('testProducerFiles/', (err, files) => {
+            //     for (const file of files) {
+            //         const filePath = join(__dirname, 'testProducerFiles/', file);
+            //         const fileContent = readFileSync(filePath);
+            //         const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
                     
-                    if (fileHash == hash) {
-                        actualPath = filePath;
-                    }
-                }
-            })
+            //         if (fileHash == hash) {
+            //             actualPath = filePath;
+            //         }
+            //     }
+            // })
             // Dial to the consumer peer 
             const consumerMA = multiaddr(addr)
-            try {
-                const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
-                console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.1')
-                send(stream, actualPath, node, consumerMA);
-            } catch (err) {console.log(err)}
+            const timer = ms => new Promise( res => setTimeout(res, ms));
+            const consID = addr.split('/')[addr.split('/').length-1]
+            fs.readFile(actualPath, async (err, data) => {
+                if (!recievedPayment.hasOwnProperty(consID)) {
+                    recievedPayment[consID] = true;
+                }
+                
+                let numChunks = 0;
+                const MAX_CHUNK_SIZE = 63000;
+                
+                if (err) {
+                    console.error('Error reading file:', err);
+                    return;
+                }
+                numChunks = Math.ceil(data.length / MAX_CHUNK_SIZE);
+                
+                for (let i = 0; i < numChunks; i += 1) {
+                    try {
+                        while (!recievedPayment[consID]) {
+                            console.log('Waiting')
+                            await timer(3000);
+                        }
+                    
+                        const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
+                        console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.1')
+                        send(i, i == numChunks-1, price, stream, actualPath, node, consumerMA);
+                        recievedPayment[consID] = false;
+                        console.log('wa', numChunks)
+                    } catch (err) {console.log(err)}
+                }
+            });
         } else if (type == 'register') {
             let [_, name, price, hash] = inputString.split(' '); // Split input by space
             price = parseInt(price);
@@ -158,6 +192,23 @@ async function run() {
             const fileContent = readFileSync(filePath);
             const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
             console.log('Filehash: ', fileHash);
+        } else if (type == 'pay') {
+            let [_, addr, amount] = inputString.split(' '); // Split input by space
+            const producerMA = multiaddr(addr);
+            try {
+                const stream = await node.dialProtocol(producerMA, '/fileExchange/1.0.2');
+                console.log('Consumer dialed to producer on protocol: /fileExchange/1.0.2')
+                await pipe(
+                    [amount], 
+                    // Turn strings into buffers
+                    (source) => map(source, (string) => uint8ArrayFromString(string)),
+                    // Encode with length prefix (so receiving side knows how much data is coming)
+                    (source) => lp.encode(source),
+                    stream.sink
+                );
+                await stream.close();
+                console.log('Paid: ', amount);
+            } catch (err) {console.log(err)}
         }
     })
 
@@ -181,9 +232,26 @@ async function run() {
         // handler(stream);
     })
 
-    node.handle('/fileExchange/1.0.1', ({ stream }) => {
+    node.handle('/fileExchange/1.0.1', ({ connection, stream }) => {
         console.log('Downloading File')
-        handler(stream);
+        handler(stream, connection, bufferedFiles, emitter);
+    })
+
+    node.handle('/fileExchange/1.0.2', async ({ connection, stream }) => {
+        const consID = connection.remotePeer.toString()
+        console.log('dd')
+        await pipe(
+            stream.source,
+            // Decode length-prefixed data
+            (source) => lp.decode(source),
+            // Turn buffers into strings
+            (source) => map(source, (buf) => uint8ArrayToString(buf.subarray())),
+            async function(source) {
+                for await (const message of source) {console.log('Recieved Payment: ', message);}
+            }
+        )
+        recievedPayment[consID] = true;
+        console.log(recievedPayment)
     })
 
 
@@ -196,6 +264,24 @@ async function run() {
 
     process.on('SIGTERM', stop)
     process.on('SIGINT', stop)
+
+    // Events
+    emitter.on('receivedChunk', async (price, producerMA) => {
+        try {
+            const stream = await node.dialProtocol(producerMA, '/fileExchange/1.0.2');
+            console.log('Consumer dialed to producer on protocol: /fileExchange/1.0.2')
+            await pipe(
+                [price.toString()], 
+                // Turn strings into buffers
+                (source) => map(source, (string) => uint8ArrayFromString(string)),
+                // Encode with length prefix (so receiving side knows how much data is coming)
+                (source) => lp.encode(source),
+                stream.sink
+            );
+            await stream.close();
+            console.log('Paid: ', price);
+        } catch (err) {console.log(err)}
+    }) 
 }
 
 const createId = async () => {
