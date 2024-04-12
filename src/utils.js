@@ -1,3 +1,5 @@
+import https from 'https';
+
 export function generateRandomWord() {
     const letters = 'abcdefghijklmnopqrstuvwxyz';
     let word = '';
@@ -71,3 +73,33 @@ export function parseMultiaddr(multiaddr) {
 // const multiaddrString = '/ip4/127.0.0.1/tcp/53959/p2p/12D3KooWStnQUitCcYegaMNTNyrmPaHzLfxRE79khfPsFmUYuRmC';
 // const parsed = parseMultiaddr(multiaddrString);
 // console.log("Example of parsing a multiaddr:", parsed);
+
+export async function fetchPublicIP() {
+    let publicIP;
+    await new Promise((resolve, reject) => {
+        https.get('https://api.ipify.org?format=json', (res) => {
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+            publicIP = JSON.parse(data).ip;
+            resolve(publicIP);
+        });
+        }).on('error', (error) => {
+            reject(error);
+        });
+    });
+    return publicIP;
+};
+
+export async function getPublicMultiaddr(node) {
+    const publicIP = await fetchPublicIP();
+    let addr = node.getMultiaddrs()[0].toString();
+    let parts = addr.split('/');
+    parts[2] = publicIP;
+    const publicMultiaddr = parts.join('/');
+    return publicMultiaddr;
+}
+
+let recievedPayment = {};
+let bufferedFiles = {}
+export {recievedPayment, bufferedFiles}

@@ -7,9 +7,13 @@ import { yamux } from '@chainsafe/libp2p-yamux'
 import { ping } from '@libp2p/ping' // remove this after done testing
 import { bootstrap } from '@libp2p/bootstrap'
 import {mdns} from '@libp2p/mdns';
-import { createPeerInfo } from './peer-node-info.js'
-import { generateRandomWord } from './utils.js'
+import { createPeerInfo, getKeyByValue } from './peer-node-info.js'
+import { generateRandomWord, getPublicMultiaddr, bufferedFiles, recievedPayment } from './utils.js'
 import geoip from 'geoip-lite';
+import { handleRequestFile, handleDownloadFile, payForChunk, handlePayForChunk } from "./protocol.js"
+import {EventEmitter} from 'node:events';
+
+class Emitter extends EventEmitter {}
 
 // export { test_node2, test_node }
 async function main() {
@@ -135,6 +139,34 @@ async function main() {
         }
     });
 
+    const publicMulti = await getPublicMultiaddr(test_node2)
+    console.log(publicMulti);
+    test_node2.getMultiaddrs().forEach((addr) => {
+        console.log(addr.toString())
+    })
+    
+
+    // Set up protocols
+    const emitter = new Emitter();
+    emitter.on('receivedChunk', async (price, producerMA) => {
+        try {
+            const stream = await test_node2.dialProtocol(producerMA, '/fileExchange/1.0.2');
+            await payForChunk(stream, price);
+        } catch (err) {console.log(err)}
+    }) 
+    test_node2.handle('/fileExchange/1.0.0', handleRequestFile);
+    test_node2.handle('/fileExchange/1.0.1', ({ connection, stream }) => handleDownloadFile(stream, connection, bufferedFiles, emitter))
+    test_node2.handle('/fileExchange/1.0.2',({ connection, stream }) => handlePayForChunk(connection, stream, recievedPayment))
+    
+    const stop = async (node) => {
+        // stop libp2p
+        await node.stop()
+        console.log('\nNode has stopped: ', node.peerId)
+        process.exit(0)
+    }
+    process.on('SIGTERM', () => stop(test_node2))
+    process.on('SIGINT', () => stop(test_node2))
+    
     displayMenu(discoveredPeers, test_node2);
 }
 
