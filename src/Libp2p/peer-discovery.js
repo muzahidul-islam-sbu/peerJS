@@ -1,4 +1,4 @@
-import { test_node2, test_node } from "./libp2p.js";
+import { test_node2, test_node } from "./libp2p/libp2p.js";
 import { multiaddr } from '@multiformats/multiaddr'
 
 function getKeyByValue(map, value) {

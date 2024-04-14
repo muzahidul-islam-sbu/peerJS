@@ -3,8 +3,8 @@ import connectToGUI from './gui-connection.js';
 import { multiaddr } from 'multiaddr'
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { Producer } from './Producer_Consumer/producer.js';
-import { Consumer } from './Producer_Consumer/consumer.js';
+import { Producer } from '../Producer_Consumer/producer.js';
+import { Consumer } from '../Producer_Consumer/consumer.js';
 import { requestFileFromProducer, sendFileToConsumer, payChunk, hashFile } from './app.js';
 
 /**
