@@ -1,7 +1,0 @@
-package package;
-syntax = "proto3";
-
-message FileData {
-    required string filename = 1;
-    required bytes data = 2;   // Size of 65536 for blocks
-}

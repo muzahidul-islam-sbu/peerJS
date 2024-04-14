@@ -1,0 +1,53 @@
+syntax = "proto3";
+package wallet;
+
+
+// Define a message for a cryptographic key pair
+message KeyPair {
+  string private_key = 1;
+  string public_key = 2;
+}
+
+// Define a message for a cryptocurrency address
+message Address {
+  string address = 1;
+  // Add any additional fields related to the address, such as balance or label
+}
+
+// Define a message for a wallet
+message Wallet {
+  string id = 1;
+  repeated KeyPair key_pairs = 2;
+  repeated Address addresses = 3;
+}
+
+// Define a message for a backup phrase
+message BackupPhrase {
+  string phrase = 1;
+}
+
+// Define service for wallet management
+service WalletService {
+  // Generate a new key pair
+  rpc GenerateKeyPair (google.protobuf.Empty) returns (KeyPair) {}
+
+  // Generate a new address from a key pair
+  rpc GenerateAddress (KeyPair) returns (Address) {}
+
+  // Create a new wallet with an optional backup phrase
+  rpc CreateWallet (BackupPhrase) returns (Wallet) {}
+
+  // Get a list of addresses associated with a wallet
+  rpc GetAddresses (Wallet) returns (AddressList) {}
+
+  // Import an existing key pair into a wallet
+  rpc ImportKeyPair (KeyPair, Wallet) returns (Wallet) {}
+
+  // Export a key pair from a wallet
+  rpc ExportKeyPair (KeyPair, Wallet) returns (KeyPair) {}
+}
+
+// Define a message for a list of addresses
+message AddressList {
+  repeated Address addresses = 1;
+}

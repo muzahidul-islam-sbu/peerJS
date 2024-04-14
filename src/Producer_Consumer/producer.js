@@ -1,8 +1,16 @@
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import grpc from '@grpc/grpc-js';
+import protoLoader from '@grpc/proto-loader';
+import fs from 'fs';
+import * as path from 'path';
+
+// Get the directory name of the current module file
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 // Loading in the proto and market server stuff
-var PROTO_PATH = __dirname + '/../Market/market.proto';
-var grpc = require('@grpc/grpc-js');
-var protoLoader = require('@grpc/proto-loader');
-var packageDefinition = protoLoader.loadSync(
+const PROTO_PATH = __dirname + '/../Market/market.proto';
+const packageDefinition = protoLoader.loadSync(
     PROTO_PATH, {
         keepCase: true,
         longs: String,
@@ -10,16 +18,13 @@ var packageDefinition = protoLoader.loadSync(
         defaults: true,
         oneofs: true
     });
-var marketObject = grpc.loadPackageDefinition(packageDefinition).market;
+const marketObject = grpc.loadPackageDefinition(packageDefinition).market;
 // market is a stub -> allows us to call the protobuf service methods specified in the market server
-var market = new marketObject.Market('localhost:50051', grpc.credentials.createInsecure());
-
-// Library stuff
-const fs = require('fs');
+const market = new marketObject.Market('172.174.239.70:50051', grpc.credentials.createInsecure());
 
 // Can just call Producer.(method they want)
 // ex: Producer.registerFile("lsfli3394ljfdsj")
-class Producer {
+export class Producer {
     /*
         Description:
             Tells the market we have this file and are willing to serve it for [bid]
@@ -49,16 +54,16 @@ class Producer {
                 console.error('Error during []:', error);
                 return false;
             } else {
-                console.log('File registered successfully:', response);
+                console.log('File registered successfully: ', hash);
 
                 // might need to format the response
                 // (need market methods to finalize first)
 
                 // Add file to directory so that we can serve it on our server
-                const destinationDirectory = './http_server_files';
-                const originalFileName = path.basename(sourcePath);
-                const destinationPath = path.join(destinationDirectory, originalFileName);
-                fs.copyFileSync(sourcePath, destinationPath);
+                // const destinationDirectory = './http_server_files';
+                // const originalFileName = path.basename(sourcePath);
+                // const destinationPath = path.join(destinationDirectory, originalFileName);
+                // fs.copyFileSync(sourcePath, destinationPath);
 
                 return true;
             }
@@ -92,5 +97,3 @@ class Producer {
     //     });
     // }
 }
-
-module.exports = { Producer };

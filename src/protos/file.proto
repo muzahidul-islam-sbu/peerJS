@@ -1,0 +1,9 @@
+package package;
+syntax = "proto3";
+
+message FileData {
+    required string filename = 1;
+    required bytes data = 2;    
+    required bool isLastChunk = 3;
+    required int32 price = 4;
+}

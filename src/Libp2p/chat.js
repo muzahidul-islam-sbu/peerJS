@@ -4,45 +4,40 @@ const {load, Message} = pkg;
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+// Define your custom protocol ID
+export const MY_PROTOCOL_ID = '/my-protocol/1.0.0';
+
+// Implement protocol handlers
+export const handleMyProtocolMessage = (peerId, message) => {
+  // Handle incoming message for your protocol
+  console.log(`Received message from ${peerId}:`, message);
+};
+
+// Export the handler function for use elsewhere if needed
+export const handleMyProtocol = ({ stream, protocol }) => {
+  // Handle incoming connections for your protocol
+  console.log(`Received incoming connection for protocol ${protocol}`);
+  pipe(
+    stream,
+    async function (source) {
+      for await (const message of source) {
+        handleMyProtocolMessage(stream.remotePeer, message);
+      }
+    }
+  );
+};
+
+// Register protocol handlers with libp2p node
+test_node2.handle('/chat/1.0.0', ({ stream, protocol }) => {
+    console.log(`Received incoming connection for protocol ${protocol}`);
+    stream.on('data', (data) => {
+        handleChatMessage(stream.remotePeer, data);
+    });
+});
+
+
 export function send (stream, filePath, node, addr) {
-  const MAX_CHUNK_SIZE = 65536; // Maximum chunk size
-  // Read utf-8 from stdin
-  load("file.proto", function(err, root) {
-    if (err) throw err;
-    
-    const FileData = root.lookupType("package.FileData");
-    const fileName = path.basename(filePath);
-    //console.log('filepath:', filePath);
-
-
-    fs.readFile(filePath, async (err, data) => {
-      if (err) {
-        console.error('Error reading file:', err);
-        return;
-      }
-      for (let i = 0; i < data.length; i += MAX_CHUNK_SIZE) {
-        const chunk = data.subarray(i, i + MAX_CHUNK_SIZE);
-        let message = FileData.create({
-          filename: fileName,
-          data: chunk
-        })
-        //console.log('filename:', fileName);
-        let buffer = FileData.encode(message).finish();
-        console.log(typeof buffer, buffer);
-        // console.log(FileData.decode(buffer))
-        await pipe(
-          [ buffer ],
-          stream,
-          async function (source) {
-            for await (const message of source) {
-              console.info(`Me: ${String(message)}`)
-            }
-          }
-        )
-      }
-      await node.hangUp(addr);
-    })
-  })
+  
 }
 
 export async function handler(stream) {

@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package filesharing;
+
+service FileSharingService {
+    //upload a file
+    rpc UploadFile (stream FileChunk) returns (UploadStatus) {}
+
+    //send a file to a peer
+    rpc SendFile (stream FileChunk) returns (FileSendResponse) {}
+
+    //request a file from a peer
+    rpc RequestFile (FileFetchRequest) returns (stream FileChunk) {}
+
+    //verify integrity and authenticity of a file
+    rpc VerifyFile (FileVerificationRequest) returns (FileVerificationResponse) {}
+
+    //list available files on a peer
+    rpc ListFiles (ListFilesRequest) returns (ListFilesResponse) {}
+}
+
+message FileChunk {
+    string filename = 1; 
+    bytes content = 2;          // the binary content of the current chunk
+    int32 chunkId = 3;          // the ID of the current chunk
+    bool isLastChunk = 4;       // indicates if this is the last chunk of the file
+    int64 fileSize = 5;         
+    string fileHash = 6;
+}
+
+message UploadStatus {
+    bool success = 1;
+    string message = 2;
+}
+
+message FileSendResponse {
+    bool success = 1;   
+    string message = 2;
+}
+
+message FileFetchRequest {
+    string filename = 1;
+}
+
+message FileVerificationRequest {
+    string filename = 1;      
+    string expectedHash = 2;  // the expected hash value of the file's content
+    int64 expectedSize = 3;   // the expected size of the file
+}
+
+message FileVerificationResponse {
+    bool isValid = 1;         //whether the file matches the expected hash and size
+    string message = 2;       //error messages
+}
+
+message ListFilesRequest {}
+
+message ListFilesResponse {
+    repeated string filenames = 1;
+}
