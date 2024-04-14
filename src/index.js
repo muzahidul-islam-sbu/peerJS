@@ -12,6 +12,7 @@ import { generateRandomWord, getPublicMultiaddr, bufferedFiles, recievedPayment 
 import geoip from 'geoip-lite';
 import { handleRequestFile, handleDownloadFile, payForChunk, handlePayForChunk } from "./protocol.js"
 import {EventEmitter} from 'node:events';
+import { createHTTPGUI } from "./gui-connection.js"
 
 class Emitter extends EventEmitter {}
 
@@ -166,7 +167,8 @@ async function main() {
     }
     process.on('SIGTERM', () => stop(test_node2))
     process.on('SIGINT', () => stop(test_node2))
-    
+    createHTTPGUI(test_node2);
+
     displayMenu(discoveredPeers, test_node2);
 }
 
