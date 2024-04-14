@@ -198,7 +198,6 @@ export async function payForChunk(stream, price) {
 
 export async function handlePayForChunk(connection, stream, recievedPayment) {
     const consID = connection.remotePeer.toString()
-    console.log('dd')
     await pipe(
         stream.source,
         // Decode length-prefixed data
@@ -210,5 +209,4 @@ export async function handlePayForChunk(connection, stream, recievedPayment) {
         }
     )
     recievedPayment[consID] = true;
-    console.log(recievedPayment)
 }

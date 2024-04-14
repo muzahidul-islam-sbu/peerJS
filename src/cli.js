@@ -175,48 +175,49 @@ export default function displayMenu(discoveredPeers, node) {
                         let [_, addr, fileHash, price] = command.split(' '); // Split input by space
                         let actualPath = join(__dirname, 'testProducerFiles/', fileHash);
                         price = parseInt(price);
-                        // readdir('testProducerFiles/', (err, files) => {
-                        //     for (const file of files) {
-                        //         const filePath = join(__dirname, 'testProducerFiles/', file);
-                        //         const fileContent = readFileSync(filePath);
-                        //         const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
-                                
-                        //         if (fileHash == hash) {
-                        //             actualPath = filePath;
-                        //         }
-                        //     }
-                        // })
-                        // Dial to the consumer peer 
-                        const consumerMA = multiaddr(addr)
-                        const timer = ms => new Promise( res => setTimeout(res, ms));
-                        const consID = addr.split('/')[addr.split('/').length-1]
-                        fs.readFile(actualPath, async (err, data) => {
-                            if (!recievedPayment.hasOwnProperty(consID)) {
-                                recievedPayment[consID] = true;
-                            }
-                            
-                            let numChunks = 0;
-                            const MAX_CHUNK_SIZE = 63000;
-                            
-                            if (err) {
-                                console.error('Error reading file:', err);
-                                return;
-                            }
-                            numChunks = Math.ceil(data.length / MAX_CHUNK_SIZE);
-                            
-                            for (let i = 0; i < numChunks; i += 1) {
-                                while (!recievedPayment[consID]) {
-                                    console.log('Waiting')
-                                    await timer(3000);
+                        fs.readdir('./testProducerFiles/', (err, files) => {
+                            for (const file of files) {
+                                const filePath = join(__dirname, 'testProducerFiles/', file);
+                                const fileContent = fs.readFileSync(filePath);
+                                const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
+
+                                if (fileHash.trim() == hash.trim()) {
+                                    actualPath = filePath;
                                 }
-                            
-                                const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
-                                console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.1')
-                                uploadFile(i, i == numChunks-1, price, stream, actualPath, node, consumerMA);
-                                recievedPayment[consID] = false;
                             }
-                            displayOptions();
-                        });
+                        
+                            // Dial to the consumer peer 
+                            const consumerMA = multiaddr(addr)
+                            const timer = ms => new Promise( res => setTimeout(res, ms));
+                            const consID = addr.split('/')[addr.split('/').length-1]
+                            fs.readFile(actualPath, async (err, data) => {
+                                if (!recievedPayment.hasOwnProperty(consID)) {
+                                    recievedPayment[consID] = true;
+                                }
+                                
+                                let numChunks = 0;
+                                const MAX_CHUNK_SIZE = 63000;
+                                
+                                if (err) {
+                                    console.error('Error reading file:', err);
+                                    return;
+                                }
+                                numChunks = Math.ceil(data.length / MAX_CHUNK_SIZE);
+                                
+                                for (let i = 0; i < numChunks; i += 1) {
+                                    while (!recievedPayment[consID]) {
+                                        console.log('Waiting')
+                                        await timer(3000);
+                                    }
+                                
+                                    const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
+                                    console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.1')
+                                    uploadFile(i, i == numChunks-1, price, stream, actualPath, node, consumerMA);
+                                    recievedPayment[consID] = false;
+                                }
+                                displayOptions();
+                            });
+                        })
                         } catch (err) {console.log(err)}
                     })
                     break;
