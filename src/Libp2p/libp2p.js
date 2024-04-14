@@ -18,16 +18,11 @@ const __filename = fileURLToPath(import.meta.url);
 
 const __dirname = dirname(__filename);
 
-import displayMenu from './cli.js'
 import { getPublicKeyFromNode, getPrivateKeyFromNode, printKeyPair, verifyNode } from './public-private-key-pair.js'
-import { createPeerInfo } from './peer-node-info.js'
-import { generateRandomWord } from './utils.js'
 
 // Setting up a websocket to exchange with the gui
 import { WebSocket } from 'ws';
 import { WebSocketServer } from 'ws';
-
-import {sendMessage, handleMessage} from './protocol.js';
 import geoip from 'geoip-lite';
 
 // const selectedPeerAddr = multiaddr('/ip4/146.190.129.133/tcp/36077/p2p/12D3KooWEfxnYQskJ6wjVts6pNdyFbw4uPcV6LtfEMdWpbEKkxYk')

@@ -96,7 +96,8 @@ export default function displayMenu(discoveredPeers, node) {
                     displayOptions();
                     break;
                 case '5':
-                    console.log("Make a market transaction");
+                    console.log("Publish a transaction to topic");
+                    node.services.pubsub.publish('fruit', new TextEncoder().encode('banana'))
                     break;
                 case '6':
                     console.log("Connect to a public peer node:");
