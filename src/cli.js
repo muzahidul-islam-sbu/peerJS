@@ -8,8 +8,8 @@ import { payForChunk, sendRequestFile, uploadFile } from './protocol.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as fs from 'node:fs';
-import { Producer } from './Producer/producer.js';
-import { Consumer } from './Consumer/consumer.js';
+import { Producer } from './Producer_Consumer/producer.js';
+import { Consumer } from './Producer_Consumer/consumer.js';
 import crypto from 'crypto';
 
 /**
