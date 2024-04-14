@@ -1,5 +1,4 @@
 # Orcacoin Peer Node JS
-Currently, only registerFile() and viewProducers() work.
 
 ## How to call/run
 ```npm install```  
@@ -22,19 +21,6 @@ consumer.viewProducers("abc");
 > &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[List of Users in the format ]described in the protofi otherwise  
 
 **viewProducers(hash)**
-
->Description:  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Tell the market that we choose this specific producer  
-Parameters:  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] producerIP -> Public IP of producer  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] consumerIP -> Public IP of consumer  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[String] hash -> Hash of the file  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Number] bid -> Bid consumer agrees to pay  
-Returns:  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[true] If producer is ready for consumer's query  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[false] otherwise  
-
-**selectProducer(producerIP, consumerIP, hash, bid)**
 
 >Description:  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Consumer downloads file, and finalizes transaction  

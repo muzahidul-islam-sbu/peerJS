@@ -58,3 +58,42 @@ export default function connectToGUI() {
         console.error('WebSocket error:', error);
     });
 }
+
+// Http API for GUI
+// http://localhost/hash
+// parse all requests
+// check the hash in request against the files we are serving
+// send a response back with the file
+
+import express from 'express';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { requestFileFromProducer } from './app.js';
+
+export function createHTTPGUI(node) {
+    const app = express();
+    // Middleware to parse JSON bodies
+    app.use(express.json());
+
+    app.get('/requestFileFromProducer/', async (req, res) => {
+        let statusCode = 200; 
+        let { prodIp, prodPort, prodId, fileHash } = req.body;
+        prodIp = String(prodIp);
+        prodPort = String(prodPort);
+        prodId = String(prodId);
+        fileHash = String(fileHash);
+
+        const ret = await requestFileFromProducer(node, prodIp, prodPort, prodId, fileHash)
+        if (!ret) {statusCode = 400;}
+        res.status(statusCode).send();
+    });
+
+    // to implement:
+        // CLI commands 9, 10, 11, 12, 13
+        // uploadFile,  
+    
+    const server = app.listen()
+    console.log(`Server is running on port ${server.address().port}`);
+    return server;
+}

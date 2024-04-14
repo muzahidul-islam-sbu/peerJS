@@ -1,16 +1,11 @@
 import readline from 'readline';
 import connectToGUI from './gui-connection.js';
-import { recievedPayment, bufferedFiles, getPublicMultiaddr } from './utils.js';
-import * as lp from 'it-length-prefixed'
-import { fromString as uint8ArrayFromString } from 'uint8arrays/from-string'
 import { multiaddr } from 'multiaddr'
-import { payForChunk, sendRequestFile, uploadFile } from './protocol.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import * as fs from 'node:fs';
-import { Producer } from './Producer/producer.js';
-import { Consumer } from './Consumer/consumer.js';
-import crypto from 'crypto';
+import { Producer } from './Producer_Consumer/producer.js';
+import { Consumer } from './Producer_Consumer/consumer.js';
+import { requestFileFromProducer, sendFileToConsumer, payChunk, hashFile } from './app.js';
 
 /**
  * TODO:
@@ -157,77 +152,22 @@ export default function displayMenu(discoveredPeers, node) {
                 case '8':
                     rl.question("Format: request [prodIp] [prodPort] [prodId] [fileHash]\n", async (command) => {
                         const [_, prodIp, prodPort, prodId, fileHash] = command.split(' '); // Split input by space
-                        const curAddr = await getPublicMultiaddr(node);
-
-                        // Dial to the producer peer 
-                        const addr = '/ip4/' + prodIp + '/tcp/' + prodPort + '/p2p/' + prodId; 
-                        const producerMA = multiaddr(addr)
-                        try {
-                            const stream = await node.dialProtocol(producerMA, '/fileExchange/1.0.0');
-                            await sendRequestFile(stream, curAddr, fileHash)
-                        } catch (err) {console.log(err)}
+                        requestFileFromProducer(node, prodIp, prodPort, prodId, fileHash);
                         displayOptions();
                     })
                     break;
                 case '9':
                     rl.question("Format: send [consumer_multiaddr] [fileHash] [price]\n", async (command) => {
-                        try {
                         let [_, addr, fileHash, price] = command.split(' '); // Split input by space
-                        let actualPath = join(__dirname, 'testProducerFiles/', fileHash);
                         price = parseInt(price);
-                        // readdir('testProducerFiles/', (err, files) => {
-                        //     for (const file of files) {
-                        //         const filePath = join(__dirname, 'testProducerFiles/', file);
-                        //         const fileContent = readFileSync(filePath);
-                        //         const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
-                                
-                        //         if (fileHash == hash) {
-                        //             actualPath = filePath;
-                        //         }
-                        //     }
-                        // })
-                        // Dial to the consumer peer 
-                        const consumerMA = multiaddr(addr)
-                        const timer = ms => new Promise( res => setTimeout(res, ms));
-                        const consID = addr.split('/')[addr.split('/').length-1]
-                        fs.readFile(actualPath, async (err, data) => {
-                            if (!recievedPayment.hasOwnProperty(consID)) {
-                                recievedPayment[consID] = true;
-                            }
-                            
-                            let numChunks = 0;
-                            const MAX_CHUNK_SIZE = 63000;
-                            
-                            if (err) {
-                                console.error('Error reading file:', err);
-                                return;
-                            }
-                            numChunks = Math.ceil(data.length / MAX_CHUNK_SIZE);
-                            
-                            for (let i = 0; i < numChunks; i += 1) {
-                                while (!recievedPayment[consID]) {
-                                    console.log('Waiting')
-                                    await timer(3000);
-                                }
-                            
-                                const stream = await node.dialProtocol(consumerMA, '/fileExchange/1.0.1');
-                                console.log('Producer dialed to consumer on protocol: /fileExchange/1.0.1')
-                                uploadFile(i, i == numChunks-1, price, stream, actualPath, node, consumerMA);
-                                recievedPayment[consID] = false;
-                            }
-                            displayOptions();
-                        });
-                        } catch (err) {console.log(err)}
+                        sendFileToConsumer(node, addr, fileHash, price)
+                        displayOptions();
                     })
                     break;
                 case '10':
                     rl.question("Format: pay [addr] [amount]\n", async (command) => {
                         let [_, addr, amount] = command.split(' '); // Split input by space
-                        const producerMA = multiaddr(addr);
-                        try {
-                            const stream = await node.dialProtocol(producerMA, '/fileExchange/1.0.2');
-                            await payForChunk(stream, amount);
-                        } catch (err) {console.log(err)}
+                        payChunk(node, addr, amount)
                         displayOptions();
                     })
                     break;
@@ -250,10 +190,7 @@ export default function displayMenu(discoveredPeers, node) {
                 case '13':
                     rl.question("Format: hash [fileName]\n", async (command) => {
                         let [_, fileName] = command.split(' '); // Split input by space
-                        const filePath = join(__dirname, 'testProducerFiles/', fileName);
-                        const fileContent = fs.readFileSync(filePath);
-                        const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
-                        console.log('Filehash: ', fileHash);
+                        hashFile(fileName);
                         displayOptions();
                     })
                     break;

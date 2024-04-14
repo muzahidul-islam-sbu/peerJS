@@ -46,46 +46,8 @@ export class Consumer {
                 return false;
             } else {
                 console.log('Producers for file', hash, ": ", response);
-                
-                // parse the response? maybe
                 var users = response.holders; // holders is a list of Users
-
                 return users;
-            }
-        });
-    }
-
-    /*  
-        Description:
-            Tell the market that we choose this specific producer
-        Parameters: 
-            [String] producerIP -> Public IP of producer
-            [String] consumerIP -> Public IP of consumer
-            [String] hash ->  Hash of the file
-            [Number] bid -> Bid consumer agrees to pay
-        Returns:
-            [true] If producer is ready for consumer's query
-            [false] otherwise
-    */
-    static selectProducer(producerIP, consumerIP, hash, bid) {
-        const args = {
-            protoProperName : producerIP,
-            protoProperName : consumerIP,
-            protoProperName : hash,
-            protoProperName : bid
-        }
-
-        market.insertMarketMethodHere(args, (error, response) => {
-            if (error) {
-                console.error('Error during []:', error);
-                return false;
-            } else {
-                console.log("Transaction ID: ", response.identifier);
-        
-                // might need to format the response
-                // (need market methods to finalize first)
-                
-                return true;
             }
         });
     }
