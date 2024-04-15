@@ -69,7 +69,8 @@ import express from 'express';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { requestFileFromProducer } from './app.js';
+import { requestFileFromProducer, payChunk, sendFileToConsumer, registerFile } from './app.js';
+
 
 export function createHTTPGUI(node) {
     const app = express();
@@ -92,7 +93,62 @@ export function createHTTPGUI(node) {
     // to implement:
         // CLI commands 9, 10, 11, 12, 13
         // uploadFile,  
-    
+
+    //cli command 9
+    app.get('./sendFileToConsumer/', async (req, res) =>{
+        let statusCode = 200;
+        const {addr, fileHash, price} = req.body;
+        try {
+            await sendFileToConsumer(node, addr, fileHash, price);
+        } catch (error) {
+            console.error("Error sending file to consumer:", error);
+            statusCode = 500;
+        }
+        res.status(statusCode).send();
+    });
+
+    //cli command 9
+    app.get('./sendFileToConsumer/', async (req, res) =>{
+        let statusCode = 200;
+        const {addr, fileHash, price} = req.body;
+        try {
+            await sendFileToConsumer(node, addr, fileHash, price);
+        } catch (error) {
+            console.error("Error sending file to consumer:", error);
+            statusCode = 500;
+        }
+        res.status(statusCode).send();
+    });
+
+    //cli command 10
+    app.post('/payChunk', async (req, res) => {
+        let statusCode = 200;
+        const { addr, amount } = req.body;
+        try {
+            await payChunk(node, addr, amount);
+        } catch (error) {
+            console.error("Error paying for chunk:", error);
+            statusCode = 500;
+        }
+        res.status(statusCode).send();
+    });
+
+    //cli command 11
+    app.post('/registerFile', async (req, res) => {
+        let statusCode = 200;
+        const {fileName, username, publicIP, port, price } = req.body;
+        try {
+            await registerFile(fileName, username, publicIP, port, price);
+        } catch (error) {
+            console.error("Error registering file:", error);
+            statusCode = 500;
+        }
+        res.status(statusCode).send();
+    });
+
+    //cli command 10
+
+
     const server = app.listen()
     console.log(`Server is running on port ${server.address().port}`);
     return server;

@@ -83,3 +83,13 @@ export function hashFile(fileName) {
     const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
     console.log('Filehash: ', fileHash);
 }
+
+export async function registerFile(fileName, uId, uName, uIp, uPort, price){
+    const fileHash = hashFile(fileName);
+    try {
+        await registerHash(fileHash, uId, uName, uIp, uPort, price);
+        console.log('File registered successfully.');
+    } catch (error) {
+        console.error('Error registering file:', error);
+    }
+}
