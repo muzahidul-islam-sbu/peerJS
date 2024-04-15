@@ -45,12 +45,12 @@ const node = await createLibp2p({
 
 await node.start();
 console.log('node has started:', node.peerId);
+  
+node.services.pubsub.subscribe('fruit')
 
 node.services.pubsub.addEventListener('message', (message) => {
     console.log(`${message.detail.topic}:`, new TextDecoder().decode(message.detail.data))
 })
-  
-node.services.pubsub.subscribe('fruit')
 
 node.addEventListener('peer:connect', (evt) => {
     const peerId = evt.detail;

@@ -82,12 +82,13 @@ async function main() {
         ],
         peerDiscovery: [
             mdns(),
-            bootstrap({
-                list: [
-                    // bootstrap node here is generated from dig command
-                    '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt'
-                ]
-            })
+            // Bootstrap nodes are initialized as entrypoints into the peer node network
+            // bootstrap({
+            //     list: [
+            //         // bootstrap node here is generated from dig command
+            //         '/dnsaddr/sg1.bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt'
+            //     ]
+            // })
         ],
         services: {
             pubsub: gossipsub(options)

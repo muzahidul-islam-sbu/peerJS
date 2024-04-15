@@ -27,7 +27,7 @@ export default function displayMenu(discoveredPeers, node) {
         console.log("2. List connected peers");
         console.log("3. Retrieve a peers public key");
         console.log("4. Connect to GUI");
-        console.log("5. Make a market transaction???");
+        console.log("5. Propagate Transaction Info");
         console.log("6. Connect to a public peer");
         console.log("7. Send Message");
         console.log("8. Request file");
@@ -97,7 +97,10 @@ export default function displayMenu(discoveredPeers, node) {
                     break;
                 case '5':
                     console.log("Publish a transaction to topic");
+                    const nodes_pubsub_data = node.services.pubsub;
+                    console.log(nodes_pubsub_data)
                     node.services.pubsub.publish('fruit', new TextEncoder().encode('banana'))
+                    // console.lognodes_pubsub_data.getSubscriptions(peerId("12D3KooWBCKZMu1N2dgNK3dFgJztYFmkS1PL63RQujqhs34DXjCL")));
                     break;
                 case '6':
                     console.log("Connect to a public peer node:");
