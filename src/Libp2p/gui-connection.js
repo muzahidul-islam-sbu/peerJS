@@ -69,7 +69,7 @@ import express from 'express';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { requestFileFromProducer, payChunk, sendFileToConsumer, registerFile } from './app.js';
+import { requestFileFromProducer, payChunk, sendFileToConsumer, registerFile, getProducers } from './app.js';
 
 const destinationDirectory = './testProducerFiles'
 const MAX_CHUNK_SIZE = 63000;
@@ -92,10 +92,6 @@ export function createHTTPGUI(node) {
         if (!ret) {statusCode = 400;}
         res.status(statusCode).send();
     });
-
-    // to implement:
-        // CLI commands 9, 10, 11, 12, 13
-        // uploadFile,  
 
     //cli command 9
     app.get('./sendFileToConsumer/', async (req, res) =>{
@@ -134,6 +130,39 @@ export function createHTTPGUI(node) {
             statusCode = 500;
         }
         res.status(statusCode).send();
+    });
+
+    //cli command 12
+    app.get('./getProducersWithFile', async (req, res) =>{
+        let statusCode = 200;
+        let message = '';
+        const { fileHash } = req.body;
+        try {
+           message = await getProducers(fileHash);
+        } catch (error) {
+            statusCode = 500;
+            message = "Error getting producers with the filehash " + fileHash + ": " + error;
+        }
+
+        res.status(statusCode).send(message);
+    });
+
+    //cli command 13
+    app.get('./hashFile', async (req, res) =>{
+        let statusCode = 200; 
+        let message = '';
+        let { filePath } = req.query;
+
+        if (!fs.existsSync(filePath)) {
+            statusCode = 400;
+            message = 'File not found';
+        } else {
+            const fileContent = fs.readFileSync(filePath);
+            const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
+            message = fileHash;
+        }
+        
+        res.status(statusCode).send(message);
     });
     
     app.post('/uploadFile', async (req, res) => {

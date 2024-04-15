@@ -1,6 +1,7 @@
 import { recievedPayment, getPublicMultiaddr } from './utils.js';
 import { multiaddr } from 'multiaddr'
-import { payForChunk, sendRequestFile, uploadFile } from './protocol.js';
+import { payForChunk, sendRequestFile, uploadFile, registerHash } from './protocol.js';
+import { viewProducers } from '../Producer_Consumer/consumer.js'
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as fs from 'node:fs';
@@ -92,4 +93,12 @@ export async function registerFile(fileName, uId, uName, uIp, uPort, price){
     } catch (error) {
         console.error('Error registering file:', error);
     }
+}
+
+export async function getProducers(fileHash) {
+    return new Promise((resolve, reject) => {
+        let users = Consumer.viewProducers(fileHash);
+        if (users !== false) resolve(users);
+        else reject("Error in Consumer.viewProducers(). Check console.");
+    });
 }

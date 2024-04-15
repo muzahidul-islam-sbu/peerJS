@@ -42,7 +42,7 @@ export class Consumer {
 
         market.checkHolders(args, (error, response) => {
             if (error) {
-                console.error('Error during []:', error);
+                console.error('Error: ', error);
                 return false;
             } else {
                 console.log('Producers for file', hash, ": ", response);
