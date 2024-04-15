@@ -8,6 +8,7 @@ import { ping } from '@libp2p/ping' // remove this after done testing
 import { bootstrap } from '@libp2p/bootstrap'
 import { mdns } from '@libp2p/mdns';
 import { gossipsub } from '@chainsafe/libp2p-gossipsub'
+import { floodsub } from '@libp2p/floodsub';
 import { createPeerInfo, getKeyByValue } from './Libp2p/peer-node-info.js'
 import { generateRandomWord, getPublicMultiaddr, bufferedFiles, recievedPayment } from './Libp2p/utils.js'
 import geoip from 'geoip-lite';
@@ -18,10 +19,10 @@ import { createHTTPGUI } from "./Libp2p/gui-connection.js"
 class Emitter extends EventEmitter {}
 
 const options = {
-    emitSelf: false, // Example: Emit to self on publish
+    emitSelf: true, // Example: Emit to self on publish
     gossipIncoming: true, // Example: Automatically gossip incoming messages
     fallbackToFloodsub: true, // Example: Fallback to floodsub if gossipsub is not supported
-    floodPublish: true, // Example: Send self-published messages to all peers
+    floodPublish: false, // Example: Send self-published messages to all peers
     doPX: false, // Example: Enable PX
     // msgIdFn: (message) => message.from + message.seqno.toString('hex'), // Example: Custom message ID function
     signMessages: true // Example: Sign outgoing messages
@@ -57,6 +58,7 @@ async function main() {
             })
         ],
         services: {
+            pubsub: gossipsub(options),
             dht: kadDHT({
                 kBucketSize: 20,
             }),
@@ -95,17 +97,22 @@ async function main() {
         }
     });
 
+    await test_node.start();
     await test_node2.start();
     console.log('Test Node 2 has started:', test_node2.peerId);
     console.log("Actively searching for peers on the local network...");
-    // console.log("Multiaddr of Test Node 2:", getMultiaddrs(test_node2));
+    // console.log("Multiaddr of Test Node 2:", getMultiaddrs(test_node2))
+    test_node2.services.pubsub.start()
+    test_node.services.pubsub.start()
+    test_node.services.pubsub.subscribe('transaction')
 
     // Gossip Sub implementation 
-    test_node2.services.pubsub.addEventListener('message', (message) => {
-        console.log(`${message.detail.topic}:`, new TextDecoder().decode(message.detail.data))
+    test_node.services.pubsub.addEventListener('message', (message) => {
+        console.log(`first node, ${message.detail.topic}:`, new TextDecoder().decode(message.detail.data))
     })
-      
-    test_node2.services.pubsub.subscribe('fruit')
+    test_node2.services.pubsub.addEventListener('message', (message) => {
+        console.log(`second node, ${message.detail.topic}:`, new TextDecoder().decode(message.detail.data))
+    })  
 
     const discoveredPeers = new Map()
     const ipAddresses = [];
@@ -206,7 +213,7 @@ async function main() {
     process.on('SIGINT', () => stop(test_node2))
     createHTTPGUI(test_node2);
 
-    displayMenu(discoveredPeers, test_node2);
+    displayMenu(discoveredPeers, test_node2, test_node);
 }
 
 main()

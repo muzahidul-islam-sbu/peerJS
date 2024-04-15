@@ -6,7 +6,7 @@ import { mdns } from '@libp2p/mdns';
 import { gossipsub } from '@chainsafe/libp2p-gossipsub'
 
 const options = {
-    emitSelf: false, // Example: Emit to self on publish
+    emitSelf: true, // Example: Emit to self on publish
     gossipIncoming: true, // Example: Automatically gossip incoming messages
     fallbackToFloodsub: true, // Example: Fallback to floodsub if gossipsub is not supported
     floodPublish: true, // Example: Send self-published messages to all peers
@@ -46,11 +46,13 @@ const node = await createLibp2p({
 await node.start();
 console.log('node has started:', node.peerId);
   
-node.services.pubsub.subscribe('fruit')
-
+node.services.pubsub.start()
+node.services.pubsub.subscribe('transaction')
 node.services.pubsub.addEventListener('message', (message) => {
+    console.log("Event listener for subscribing works!")
     console.log(`${message.detail.topic}:`, new TextDecoder().decode(message.detail.data))
 })
+node.services.pubsub.publish('transaction', new TextEncoder().encode('123456789'))
 
 node.addEventListener('peer:connect', (evt) => {
     const peerId = evt.detail;

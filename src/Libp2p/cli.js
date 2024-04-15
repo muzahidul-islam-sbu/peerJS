@@ -6,6 +6,9 @@ import { fileURLToPath } from 'url';
 import { Producer } from '../Producer_Consumer/producer.js';
 import { Consumer } from '../Producer_Consumer/consumer.js';
 import { requestFileFromProducer, sendFileToConsumer, payChunk, hashFile } from './app.js';
+import { createPeerInfo } from './peer-node-info.js';
+import { generateRandomWord } from './utils.js';
+import geoip from 'geoip-lite';
 
 /**
  * TODO:
@@ -14,7 +17,7 @@ import { requestFileFromProducer, sendFileToConsumer, payChunk, hashFile } from 
  */
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-export default function displayMenu(discoveredPeers, node) {
+export default function displayMenu(discoveredPeers, node, otherNode) {
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -96,11 +99,35 @@ export default function displayMenu(discoveredPeers, node) {
                     displayOptions();
                     break;
                 case '5':
-                    console.log("Publish a transaction to topic");
+                    console.log("Publish a transaction to topic\n");
                     const nodes_pubsub_data = node.services.pubsub;
+                    node.services.pubsub.subscribe('transaction')
+                    // node.services.pubsub.subscribe('fruits')
+                    // node.services.pubsub.subscribe('animals')
+                    otherNode.services.pubsub.subscribe('transaction')
                     console.log(nodes_pubsub_data)
-                    node.services.pubsub.publish('fruit', new TextEncoder().encode('banana'))
-                    // console.lognodes_pubsub_data.getSubscriptions(peerId("12D3KooWBCKZMu1N2dgNK3dFgJztYFmkS1PL63RQujqhs34DXjCL")));
+                    const s = node.services.pubsub.getSubscribers('transaction');
+                    const t = node.services.pubsub.getTopics()
+                    console.log('pubsub subscribers %O', s);
+                    console.log('pubsub topics %O', t);
+                    node.services.pubsub.addEventListener('message', (message) => {
+                        console.log("the broadcaster receives its own message")
+                        // console.log(`${message.detail.topic}:`, new TextDecoder().decode(message.detail.data))
+                    })
+                    otherNode.services.pubsub.addEventListener('message', (message) => {
+                        console.log("receive new msg")
+                        // console.log(`${message.detail.topic}:`, new TextDecoder().decode(message.detail.data))
+                    })
+                    node.services.pubsub.publish('transaction', new TextEncoder().encode('123456789'))
+                    otherNode.services.pubsub.publish('transaction', new TextEncoder().encode('987654321'))
+                    .then(() => {
+                        console.log('Message published successfully');
+                        displayOptions();
+                    })
+                    .catch((err) => {
+                        console.error('Failed to publish message:', err);
+                        displayOptions();
+                    });
                     break;
                 case '6':
                     console.log("Connect to a public peer node:");
