@@ -55,5 +55,48 @@ JS websockets were used to create a server for every newly created node. This we
 Implementation for the websocket in the GUI project is currently stored in the DataTable.tsx
 Clone and replace the DataTable.tsx file in https://github.com/GreenMarioX/CSE416-OrcaNet with the DataTable.tsx in this project.
 webSocketService.js is an example of how to setup a server using JS websockets
+
+HTTP API
+* POST /uploadFile
+```javascript
+// Request Body JSON
+{
+    "filePath": "C:\\Users\\mm\\Documents\\6_4-6_17.pdf"
+}
+```
+* POST /deleteFile
+```javascript
+// Request Body JSON
+{
+    "filePath": "C:\\Users\\mm\\Documents\\GitHub\\peerJS\\src\\testProducerFiles\\6_4-6_17.pdf"
+}
+```
+* GET /getFileInfo?filePath={replace with file path}
+```javascript
+// Response Body JSON
+{
+    "fileName": "6_4-6_17.pdf",
+    "filePath": "C:\\Users\\mm\\Documents\\GitHub\\peerJS\\src\\testProducerFiles\\6_4-6_17.pdf",
+    "fileDate": "2024-04-14T21:33:37.498Z",
+    "fileSize": 869694,  // Bytes
+    "numberChunks": 14,
+    "fileHash": "3e81a66c7a0b3f61cf9956abcc07dcee4c5f7f8db46041cafcc6b818975ca128"
+}
+```
+* GET /getProducerFilesInfo
+```javascript
+// Response Body JSON
+[
+  {
+      "fileName": "6_4-6_17.pdf",
+      "filePath": "C:\\Users\\mm\\Documents\\GitHub\\peerJS\\src\\testProducerFiles\\6_4-6_17.pdf",
+      "fileDate": "2024-04-14T21:33:37.498Z",
+      "fileSize": 869694,  // Bytes
+      "numberChunks": 14,
+      "fileHash": "3e81a66c7a0b3f61cf9956abcc07dcee4c5f7f8db46041cafcc6b818975ca128"
+  }
+  ...
+]
+```
 ## Peer-Server Methods
 Add here.

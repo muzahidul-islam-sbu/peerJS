@@ -71,13 +71,16 @@ import fs from 'fs';
 import path from 'path';
 import { requestFileFromProducer, payChunk, sendFileToConsumer, registerFile } from './app.js';
 
+const destinationDirectory = './testProducerFiles'
+const MAX_CHUNK_SIZE = 63000;
+
 
 export function createHTTPGUI(node) {
     const app = express();
     // Middleware to parse JSON bodies
     app.use(express.json());
 
-    app.get('/requestFileFromProducer/', async (req, res) => {
+    app.post('/requestFileFromProducer/', async (req, res) => {
         let statusCode = 200; 
         let { prodIp, prodPort, prodId, fileHash } = req.body;
         prodIp = String(prodIp);
@@ -93,6 +96,102 @@ export function createHTTPGUI(node) {
     // to implement:
         // CLI commands 9, 10, 11, 12, 13
         // uploadFile,  
+
+    app.post('/uploadFile', async (req, res) => {
+        let statusCode = 200; 
+        let message = 'Success';
+        let { filePath } = req.body;
+
+        if (!fs.existsSync(filePath)) {
+            statusCode = 400;
+            message = 'File not found';
+        }
+        const fileName = path.basename(filePath);
+        const destinationPath = path.join(destinationDirectory, fileName);
+        fs.copyFile(filePath, destinationPath, (error) => {
+            if (error) {
+                statusCode = 400;
+                message = 'File copy unsuccessful';
+            }
+        });
+        res.status(statusCode).send(message);
+    });
+
+    app.post('/deleteFile', async (req, res) => {
+        let statusCode = 200; 
+        let message = 'Success';
+        let { filePath } = req.body;
+
+        if (!fs.existsSync(filePath)) {
+            statusCode = 400;
+            message = 'File not found';
+        }
+        // Asynchronously delete the file
+        fs.unlink(filePath, (error) => {
+            if (error) {
+                statusCode = 400;
+                message = 'Error deleting file';
+            }
+        });
+        res.status(statusCode).send(message);
+    });
+    
+    app.get('/getFileInfo', async (req, res) => {
+        let statusCode = 200; 
+        let message = '';
+        let { filePath } = req.query;
+
+        if (!fs.existsSync(filePath)) {
+            statusCode = 400;
+            message = 'File not found';
+        } else {
+            const fileName = path.basename(filePath);
+            const fileStats = fs.statSync(filePath);
+            const fileSize = fileStats.size;
+            const numberChunks =  Math.ceil(fileSize / MAX_CHUNK_SIZE);
+            const fileDate = fileStats.birthtime;
+            const fileContent = fs.readFileSync(filePath);
+            const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
+    
+            message = {
+                fileName,
+                filePath,
+                fileDate,
+                fileSize,
+                numberChunks,
+                fileHash
+            };
+        }
+        
+        res.status(statusCode).send(message);
+    });
+
+    app.get('/getProducerFilesInfo', async (req, res) => {
+        let statusCode = 200; 
+        let message = [];
+
+        const files = fs.readdirSync(destinationDirectory);
+        files.forEach(file => {
+            const filePath = path.join(destinationDirectory, file);
+            const fileName = path.basename(filePath);
+            const fileStats = fs.statSync(filePath);
+            const fileSize = fileStats.size;
+            const numberChunks =  Math.ceil(fileSize / MAX_CHUNK_SIZE);
+            const fileDate = fileStats.birthtime;
+            const fileContent = fs.readFileSync(filePath);
+            const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
+    
+            message.push({
+                fileName,
+                filePath,
+                fileDate,
+                fileSize,
+                numberChunks,
+                fileHash
+            })
+        })
+        res.status(statusCode).send(message);
+    })
 
     //cli command 9
     app.get('./sendFileToConsumer/', async (req, res) =>{
@@ -150,6 +249,6 @@ export function createHTTPGUI(node) {
 
 
     const server = app.listen()
-    console.log(`Server is running on port ${server.address().port}`);
+    console.log(`HTTP GUI API is running on port ${server.address().port}`);
     return server;
 }

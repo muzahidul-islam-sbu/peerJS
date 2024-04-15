@@ -20,6 +20,15 @@ message Wallet {
   repeated KeyPair key_pairs = 2;
   repeated Address addresses = 3;
 }
+syntax = "proto3";
+
+message Transaction {
+  string sender = 1;
+  string recipient = 2;
+  double amount = 3;
+  // Add other transaction properties as needed
+}
+
 
 // Define a message for a backup phrase
 message BackupPhrase {
@@ -51,3 +60,5 @@ service WalletService {
 message AddressList {
   repeated Address addresses = 1;
 }
+
+
