@@ -1,13 +1,15 @@
 import { recievedPayment, getPublicMultiaddr } from './utils.js';
 import { multiaddr } from 'multiaddr'
-import { payForChunk, sendRequestFile, uploadFile, registerHash } from './protocol.js';
-import { viewProducers } from '../Producer_Consumer/consumer.js'
+import { payForChunk, sendRequestFile, uploadFile } from './protocol.js';
+import { Consumer } from '../Producer_Consumer/consumer.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as fs from 'node:fs';
 import crypto from 'crypto';
+import { Producer } from '../Producer_Consumer/producer.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const producerFilesPath = join(__dirname, '..', 'testProducerFiles');
 
 export async function requestFileFromProducer(node, prodIp, prodPort, prodId, fileHash) {
     const curAddr = await getPublicMultiaddr(node);
@@ -24,10 +26,10 @@ export async function requestFileFromProducer(node, prodIp, prodPort, prodId, fi
 
 export async function sendFileToConsumer(node, addr, fileHash, price) {
     try {
-        let actualPath = join(__dirname, 'testProducerFiles/', fileHash);
-        fs.readdir('./testProducerFiles/', (err, files) => {
+        let actualPath = join(producerFilesPath, fileHash);
+        fs.readdir(producerFilesPath, (err, files) => {
             for (const file of files) {
-                const filePath = join(__dirname, 'testProducerFiles/', file);
+                const filePath = join(producerFilesPath, file);
                 const fileContent = fs.readFileSync(filePath);
                 const hash = crypto.createHash('sha256').update(fileContent).digest('hex');
 
@@ -79,7 +81,7 @@ export async function payChunk(node, addr, amount) {
 }
 
 export function hashFile(fileName) {
-    const filePath = join(__dirname, 'testProducerFiles/', fileName);
+    const filePath = join(producerFilesPath, fileName);
     const fileContent = fs.readFileSync(filePath);
     const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
     console.log('Filehash: ', fileHash);
@@ -87,12 +89,11 @@ export function hashFile(fileName) {
 
 export async function registerFile(fileName, uId, uName, uIp, uPort, price){
     const fileHash = hashFile(fileName);
-    try {
-        await registerHash(fileHash, uId, uName, uIp, uPort, price);
-        console.log('File registered successfully.');
-    } catch (error) {
-        console.error('Error registering file:', error);
-    }
+    return new Promise((resolve, reject) => {
+        let users = Producer.registerFile(fileHash, uId, uName, uIp, uPort, price);
+        if (users !== false) resolve(users);
+        else reject("Error in Producer.registerFile(). Check console.");
+    });
 }
 
 export async function getProducers(fileHash) {

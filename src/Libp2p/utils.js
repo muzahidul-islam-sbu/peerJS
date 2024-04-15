@@ -101,5 +101,6 @@ export async function getPublicMultiaddr(node) {
 }
 
 let recievedPayment = {};
-let bufferedFiles = {}
-export {recievedPayment, bufferedFiles}
+let bufferedFiles = {};
+let fileRequests = [];
+export {recievedPayment, bufferedFiles, fileRequests}

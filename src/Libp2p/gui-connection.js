@@ -69,9 +69,12 @@ import express from 'express';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import url from 'url';
 import { requestFileFromProducer, payChunk, sendFileToConsumer, registerFile, getProducers } from './app.js';
+import { fileRequests, getPublicMultiaddr } from './utils.js';
 
-const destinationDirectory = './testProducerFiles'
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+const destinationDirectory = path.join(__dirname, '..', 'testProducerFiles')
 const MAX_CHUNK_SIZE = 63000;
 
 
@@ -93,8 +96,14 @@ export function createHTTPGUI(node) {
         res.status(statusCode).send();
     });
 
+    app.get('/viewFileRequests/', async (req, res) => {
+        let statusCode = 200; 
+        
+        res.status(statusCode).send(fileRequests);
+    });
+
     //cli command 9
-    app.get('./sendFileToConsumer/', async (req, res) =>{
+    app.post('/sendFileToConsumer/', async (req, res) =>{
         let statusCode = 200;
         const {addr, fileHash, price} = req.body;
         try {
@@ -122,9 +131,15 @@ export function createHTTPGUI(node) {
     //cli command 11
     app.post('/registerFile', async (req, res) => {
         let statusCode = 200;
-        const {fileName, username, publicIP, port, price } = req.body;
+        const {fileName, username, price} = req.body;
+        const peerId = node.peerId.toString();
+        const publicMulti = await getPublicMultiaddr(node);
+        const parts = publicMulti.split('/')
+        const publicIP = parts[1]
+        const port = parts[3]
+
         try {
-            await registerFile(fileName, username, publicIP, port, price);
+            await registerFile(fileName, peerId, username, publicIP, port, price);
         } catch (error) {
             console.error("Error registering file:", error);
             statusCode = 500;
@@ -133,7 +148,7 @@ export function createHTTPGUI(node) {
     });
 
     //cli command 12
-    app.get('./getProducersWithFile', async (req, res) =>{
+    app.get('/getProducersWithFile', async (req, res) =>{
         let statusCode = 200;
         let message = '';
         const { fileHash } = req.body;
@@ -148,7 +163,7 @@ export function createHTTPGUI(node) {
     });
 
     //cli command 13
-    app.get('./hashFile', async (req, res) =>{
+    app.get('/hashFile', async (req, res) =>{
         let statusCode = 200; 
         let message = '';
         let { filePath } = req.query;
@@ -159,7 +174,7 @@ export function createHTTPGUI(node) {
         } else {
             const fileContent = fs.readFileSync(filePath);
             const fileHash = crypto.createHash('sha256').update(fileContent).digest('hex');
-            message = fileHash;
+            message = {fileHash};
         }
         
         res.status(statusCode).send(message);
