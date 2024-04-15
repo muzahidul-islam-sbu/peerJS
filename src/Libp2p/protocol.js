@@ -210,3 +210,40 @@ export async function handlePayForChunk(connection, stream, recievedPayment) {
     )
     recievedPayment[consID] = true;
 }
+
+
+export async function registerHash(hash, uId, uName, uIp, uPort, uPrice) {
+    return new Promise((resolve, reject) => {
+        protobuf.load("./Market/market.proto", async function (err, root) {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            const Market = root.lookupService('market.Market');
+            const client = new Market('localhost:50051', grpc.credentials.createInsecure());
+
+            const userData = {
+                id: uId,
+                name: uName,
+                ip: uIp,
+                port: uPort,
+                price: uPrice
+            };
+            const request = {
+                user: userData,
+                fileHash: hash
+            };
+
+            client.RegisterFile(request, (error, response) => {
+                if (error) {
+                    console.error('Error registering file:', error);
+                    reject(error);
+                    return;
+                }
+                console.log('File registered successfully:', response);
+                resolve(response);
+            });
+        });
+    });
+}
